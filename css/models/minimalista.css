@@ -1,0 +1,152 @@
+.cv-modelo.minimalista {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 10px;
+  line-height: 1.65;
+  color: #4b5563;
+  padding: 32px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cv-modelo.minimalista .cv-mheader {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cv-modelo.minimalista .cv-mheader .cv-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 26px;
+  font-weight: 300;
+  color: #111827;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.cv-modelo.minimalista .cv-mheader .cv-title {
+  font-size: 12px;
+  font-weight: 300;
+  color: #9ca3af;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.cv-modelo.minimalista .cv-mheader .cv-mcontacto {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 9.5px;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+}
+
+.cv-modelo.minimalista .cv-mheader .cv-mcontacto span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cv-modelo.minimalista .cv-mheader .cv-mcontacto svg { opacity: 0.4; }
+
+.cv-modelo.minimalista .cv-msection h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #d1d5db;
+  margin-bottom: 6px;
+}
+
+.cv-modelo.minimalista .cv-resumo {
+  font-size: 10.5px;
+  color: #6b7280;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.cv-modelo.minimalista .cv-mitem {
+  margin-bottom: 8px;
+}
+
+.cv-modelo.minimalista .cv-mitem:last-child { margin-bottom: 0; }
+
+.cv-modelo.minimalista .cv-mitem-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.cv-modelo.minimalista .cv-mitem-title {
+  font-weight: 400;
+  font-size: 10.5px;
+  color: #374151;
+}
+
+.cv-modelo.minimalista .cv-mitem-date {
+  font-size: 9px;
+  color: #d1d5db;
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.cv-modelo.minimalista .cv-mitem-sub {
+  font-size: 9.5px;
+  color: #9ca3af;
+  font-weight: 300;
+  margin-bottom: 2px;
+}
+
+.cv-modelo.minimalista .cv-mitem-desc {
+  font-size: 9.5px;
+  color: #6b7280;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.cv-modelo.minimalista .cv-mskills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cv-modelo.minimalista .cv-mskill {
+  font-size: 9px;
+  padding: 2px 8px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 2px;
+  color: #6b7280;
+  font-weight: 300;
+}
+
+.cv-modelo.minimalista .cv-midiomas {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cv-modelo.minimalista .cv-midioma {
+  font-size: 9.5px;
+  color: #6b7280;
+}
+
+.cv-modelo.minimalista .cv-midioma strong {
+  font-weight: 500;
+  color: #374151;
+}
+
+@media print {
+  .cv-modelo.minimalista { width: 210mm; min-height: 297mm; }
+  @page { size: A4; margin: 0; }
+}
+
+@media screen and (max-width: 800px) {
+  .cv-modelo.minimalista { width: 100%; min-height: auto; padding: 20px; }
+}
