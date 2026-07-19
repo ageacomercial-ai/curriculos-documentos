@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#1e2d3d"/>
+  <rect x="40" y="36" width="112" height="142" rx="8" fill="#fff" stroke="#c9a96e" stroke-width="3"/>
+  <line x1="56" y1="68" x2="136" y2="68" stroke="#c9a96e" stroke-width="3" stroke-linecap="round"/>
+  <line x1="56" y1="84" x2="136" y2="84" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+  <line x1="56" y1="100" x2="120" y2="100" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+  <line x1="56" y1="116" x2="136" y2="116" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+  <line x1="56" y1="132" x2="104" y2="132" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="96" cy="52" r="6" fill="#c9a96e"/>
+  <text x="96" y="172" text-anchor="middle" fill="#c9a96e" font-family="serif" font-size="14" font-weight="bold">CV</text>
+</svg>
