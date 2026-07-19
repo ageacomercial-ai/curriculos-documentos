@@ -147,6 +147,4 @@
   @page { size: A4; margin: 0; }
 }
 
-@media screen and (max-width: 800px) {
-  .cv-modelo.minimalista { width: 100%; min-height: auto; padding: 20px; }
-}
+

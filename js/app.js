@@ -27,28 +27,28 @@
       <div class="page">
         <div class="home-hero">
           <div class="brand-emblem">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <rect x="2" y="2" width="36" height="36" rx="8" stroke="#c9a96e" stroke-width="2.5" fill="none"/>
-              <path d="M20 10 L20 30 M12 20 L28 20" stroke="#c9a96e" stroke-width="2.5" stroke-linecap="round"/>
-              <circle cx="20" cy="20" r="4" fill="#c9a96e"/>
+            <svg viewBox="0 0 44 44" fill="none">
+              <rect x="2" y="2" width="40" height="40" rx="10" stroke="currentColor" stroke-width="2.5" fill="none" color="#c9a96e"/>
+              <path d="M22 10 L22 34 M12 22 L32 22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" color="#c9a96e"/>
+              <circle cx="22" cy="22" r="5" fill="currentColor" color="#c9a96e"/>
             </svg>
           </div>
-          <h1>O teu documento<br>profissional começa aqui</h1>
-          <p class="subtitle">Currículos, declarações, cartas, contratos e requerimentos — com modelos premium que abrem portas.</p>
+          <h1>Documentos profissionais,<br>resultados reais</h1>
+          <p class="subtitle">Cria currículos, declarações, cartas e contratos com <strong>modelos premium</strong> — tudo no teu telemóvel, pronto a exportar.</p>
         </div>
         <div class="card-grid">
           <div class="card" onclick="Router.go('criar-curriculo')" style="animation-delay:0.1s">
-            <div class="card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+            <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
             <h3>Criar Currículo</h3>
             <p>Escolhe entre 5 modelos premium e preenche os teus dados passo a passo.</p>
           </div>
           <div class="card" onclick="Router.go('selecionar-doc')" style="animation-delay:0.2s">
-            <div class="card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+            <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>
             <h3>Criar Documento</h3>
             <p>Declarações, cartas, contratos e requerimentos formais.</p>
           </div>
         </div>
-        ${hasCV ? `<div class="home-resume"><button class="btn-primary" onclick="Router.go('pre-visualizar-cv')" style="animation-delay:0.25s">Continuar último currículo</button></div>` : ''}
+        ${hasCV ? `<div class="home-resume"><button class="btn-primary" onclick="Router.go('pre-visualizar-cv')" style="animation-delay:0.25s"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Continuar último currículo</button></div>` : ''}
         <div class="home-tip">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           <span>Podes usar voz para preencher campos — toca no 🎤 ao lado dos inputs</span>
@@ -90,6 +90,7 @@
 
   Router.register('pre-visualizar-cv', {
     title: 'Pré-visualizar',
+    onRender: function () { scalePreview('preview-frame'); },
     render() {
       const d = loadCV();
       const modelos = ModelRegistry.list('cv');
@@ -160,6 +161,7 @@
 
   Router.register('pre-visualizar-doc', {
     title: 'Pré-visualizar',
+    onRender: function () { scalePreview('preview-frame'); },
     render() {
       const tipo = getDocType();
       const info = DocTypes.get(tipo);
@@ -412,6 +414,42 @@
     else localStorage.setItem('chave_ai_endpoint', url);
     Router.go('definicoes');
   };
+
+  /* ─── PREVIEW SCALING ─── */
+
+  function scalePreview(frameId) {
+    const frame = document.getElementById(frameId);
+    if (!frame) return;
+    const wrap = frame.parentElement;
+    if (!wrap) return;
+    const modelo = frame.querySelector('.cv-modelo') || frame.querySelector('.documento');
+    if (!modelo) return;
+
+    const wrapWidth = wrap.clientWidth - 32;
+    if (wrapWidth <= 0) return;
+
+    const modeloWidth = 210;
+    const scale = Math.min(1, wrapWidth / modeloWidth);
+
+    if (scale < 1) {
+      modelo.style.transform = 'scale(' + scale + ')';
+      modelo.style.transformOrigin = 'top center';
+      modelo.style.width = '210mm';
+      frame.style.height = (297 * scale) + 'mm';
+    } else {
+      modelo.style.transform = '';
+      modelo.style.transformOrigin = '';
+      modelo.style.width = '210mm';
+      frame.style.height = '';
+    }
+  }
+
+  window.scalePreview = scalePreview;
+
+  window.addEventListener('resize', function () {
+    if (Router.current === 'pre-visualizar-cv') scalePreview('preview-frame');
+    if (Router.current === 'pre-visualizar-doc') scalePreview('preview-frame');
+  });
 
   /* ─── START ─── */
 

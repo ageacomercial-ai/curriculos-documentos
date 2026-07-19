@@ -146,8 +146,4 @@
   @page { size: A4; margin: 0; }
 }
 
-@media screen and (max-width: 800px) {
-  .cv-modelo.executivo { width: 100%; min-height: auto; flex-direction: column; }
-  .cv-modelo.executivo .cv-sidebar { width: 100%; }
-  .cv-modelo.executivo .cv-main { width: 100%; }
-}
+

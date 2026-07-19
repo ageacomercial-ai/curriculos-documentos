@@ -173,6 +173,4 @@
   @page { size: A4; margin: 0; }
 }
 
-@media screen and (max-width: 800px) {
-  .cv-modelo.moderno { width: 100%; min-height: auto; }
-}
+

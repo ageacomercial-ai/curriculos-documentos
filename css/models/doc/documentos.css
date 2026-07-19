@@ -154,10 +154,4 @@
   }
 }
 
-@media screen and (max-width: 800px) {
-  .documento {
-    width: 100%;
-    min-height: auto;
-    padding: 15mm 10mm;
-  }
-}
+

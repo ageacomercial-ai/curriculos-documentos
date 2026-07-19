@@ -234,16 +234,4 @@
   }
 }
 
-@media screen and (max-width: 800px) {
-  .cv-modelo.classico {
-    width: 100%;
-    min-height: auto;
-    flex-direction: column;
-  }
-  .cv-modelo.classico .cv-sidebar {
-    width: 100%;
-  }
-  .cv-modelo.classico .cv-main {
-    width: 100%;
-  }
-}
+

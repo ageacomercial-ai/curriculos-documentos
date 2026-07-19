@@ -2,8 +2,8 @@ const Router = {
   routes: {},
   current: null,
 
-  register(name, { render, title, onLeave }) {
-    this.routes[name] = { render, title, onLeave };
+  register(name, { render, title, onLeave, onRender }) {
+    this.routes[name] = { render, title, onLeave, onRender };
   },
 
   async go(name, params) {
@@ -13,7 +13,7 @@ const Router = {
     this.current = name;
     const route = this.routes[name];
     if (!route) return;
-    document.getElementById('app-title').textContent = route.title || 'Currículos & Documentos';
+    document.getElementById('app-title').textContent = route.title || 'Chave';
     const content = document.getElementById('app-content');
     content.innerHTML = '';
     const el = await route.render(params);
@@ -25,5 +25,8 @@ const Router = {
     content.scrollTop = 0;
     const backBtn = document.getElementById('btn-back');
     backBtn.style.display = name === 'home' ? 'none' : 'flex';
+    if (route.onRender) {
+      setTimeout(function () { route.onRender(); }, 50);
+    }
   }
 };

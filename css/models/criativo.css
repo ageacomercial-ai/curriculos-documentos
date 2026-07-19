@@ -153,7 +153,4 @@
   @page { size: A4; margin: 0; }
 }
 
-@media screen and (max-width: 800px) {
-  .cv-modelo.criativo { width: 100%; min-height: auto; }
-  .cv-modelo.criativo .cv-body { grid-template-columns: 1fr; }
-}
+
