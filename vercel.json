@@ -1,0 +1,9 @@
+{
+  "name": "curriculos-documentos",
+  "version": 2,
+  "public": true,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "devCommand": null,
+  "framework": null
+}
