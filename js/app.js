@@ -8,56 +8,70 @@
   var getDocType = function() { return Storage.getDocType(); };
   var setDocType = function(t) { Storage.setDocType(t); };
 
-  document.getElementById('btn-back').addEventListener('click', () => {
-    const cur = Router.current;
-    if (cur === 'criar-curriculo') { guardarCV(); Router.go('home'); }
-    else if (cur === 'pre-visualizar-cv') { Router.go('criar-curriculo'); }
-    else if (cur === 'selecionar-doc') { Router.go('home'); }
-    else if (cur === 'preencher-doc') { Router.go('selecionar-doc'); }
-    else if (cur === 'pre-visualizar-doc') { Router.go('preencher-doc'); }
-    else if (cur === 'definicoes') { Router.go('home'); }
-    else { Router.go('home'); }
-  });
+  /* ─── NAVEGAÇÃO ─── */
 
-  /* ─── HOME ─── */
-
-  function renderHome() {
-    const hasCV = Object.keys(loadCV()).length > 1;
-    return `
-      <div class="page">
-        <div class="home-hero">
-          <div class="brand-emblem">
-            <svg viewBox="0 0 44 44" fill="none">
-              <rect x="2" y="2" width="40" height="40" rx="10" stroke="currentColor" stroke-width="2.5" fill="none" color="#c9a96e"/>
-              <path d="M22 10 L22 34 M12 22 L32 22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" color="#c9a96e"/>
-              <circle cx="22" cy="22" r="5" fill="currentColor" color="#c9a96e"/>
-            </svg>
-          </div>
-          <h1>Documentos profissionais,<br>resultados reais</h1>
-          <p class="subtitle">Cria currículos, declarações, cartas e contratos com <strong>modelos premium</strong> — tudo no teu telemóvel, pronto a exportar.</p>
-        </div>
-        <div class="card-grid">
-          <div class="card" onclick="Router.go('criar-curriculo')" style="animation-delay:0.1s">
-            <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-            <h3>Criar Currículo</h3>
-            <p>Escolhe entre 5 modelos premium e preenche os teus dados passo a passo.</p>
-          </div>
-          <div class="card" onclick="Router.go('selecionar-doc')" style="animation-delay:0.2s">
-            <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>
-            <h3>Criar Documento</h3>
-            <p>Declarações, cartas, contratos e requerimentos formais.</p>
-          </div>
-        </div>
-        ${hasCV ? `<div class="home-resume"><button class="btn-primary" onclick="Router.go('pre-visualizar-cv')" style="animation-delay:0.25s"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Continuar último currículo</button></div>` : ''}
-        <div class="home-tip">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Podes usar voz para preencher campos — toca no 🎤 ao lado dos inputs</span>
-        </div>
-      </div>
-    `;
+  function atualizarNav(route) {
+    document.querySelectorAll('.sidebar-item, .bottom-nav-item').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.route === route);
+    });
   }
 
-  Router.register('home', { render: renderHome, title: 'Chave' });
+  window.navegar = function (route) {
+    const cur = Router.current;
+    if (cur === 'criar-curriculo' || cur === 'preencher-doc') {
+      if (cur === 'criar-curriculo') guardarCV();
+      if (cur === 'preencher-doc') guardarDoc();
+    }
+    Router.go(route);
+  };
+
+  /* ─── HOME / DASHBOARD ─── */
+
+  Router.register('home', {
+    title: 'Início',
+    render: function () {
+      var d = loadCV();
+      var hasCV = Object.keys(d).length > 1;
+      var expCount = (d.experiencias || []).filter(function (e) { return e.cargo; }).length;
+      var totalDocs = DocTypes ? DocTypes.tipos.length : 0;
+      var isPaid = Storage ? Storage.isPaid() : false;
+
+      return '<div class="page">' +
+        '<div class="dashboard-hero">' +
+          '<div class="dashboard-emblem">' +
+            '<svg viewBox="0 0 44 44" fill="none">' +
+              '<rect x="2" y="2" width="40" height="40" rx="10" stroke="#c9a96e" stroke-width="2.5" fill="none"/>' +
+              '<path d="M22 10 L22 34 M12 22 L32 22" stroke="#c9a96e" stroke-width="2.5" stroke-linecap="round"/>' +
+              '<circle cx="22" cy="22" r="5" fill="#c9a96e"/>' +
+            '</svg>' +
+          '</div>' +
+          '<h1>Bem-vindo à Chave</h1>' +
+          '<p class="subtitle">Cria currículos, declarações, cartas e contratos com <strong>modelos premium</strong> — tudo num só lugar.</p>' +
+        '</div>' +
+        '<div class="dashboard-stats">' +
+          '<div class="stat-card"><div class="stat-value">' + (hasCV ? '1' : '0') + '</div><div class="stat-label">Currículos</div></div>' +
+          '<div class="stat-card"><div class="stat-value">' + expCount + '</div><div class="stat-label">Experiências</div></div>' +
+          '<div class="stat-card"><div class="stat-value">' + totalDocs + '</div><div class="stat-label">Documentos</div></div>' +
+          '<div class="stat-card"><div class="stat-value">' + (isPaid ? '✓' : '—') + '</div><div class="stat-label">Pagamento</div></div>' +
+        '</div>' +
+        '<div class="card-grid">' +
+          '<div class="card" onclick="navegar(\'criar-curriculo\')" style="animation-delay:0.1s">' +
+            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
+            '<h3>Criar Currículo</h3><p>Escolhe entre 5 modelos premium e preenche os teus dados.</p>' +
+          '</div>' +
+          '<div class="card" onclick="navegar(\'selecionar-doc\')" style="animation-delay:0.2s">' +
+            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>' +
+            '<h3>Criar Documento</h3><p>Declarações, cartas, contratos e requerimentos formais.</p>' +
+          '</div>' +
+        '</div>' +
+        (hasCV ? '<div class="home-resume"><button class="btn-primary" onclick="navegar(\'pre-visualizar-cv\')" style="animation-delay:0.25s"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Continuar último currículo</button></div>' : '') +
+        '<div class="home-tip">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
+          '<span>Podes usar voz para preencher campos — toca no 🎤 ao lado dos inputs</span>' +
+        '</div>' +
+      '</div>';
+    }
+  });
 
   /* ─── CRIAR CURRÍCULO ─── */
 
@@ -69,6 +83,8 @@
         ? `<img src="${esc(d.foto)}" alt="" class="photo-preview">`
         : (d.foto ? `<img src="${esc(d.foto)}" alt="" class="photo-preview" onerror="this.parentElement.innerHTML='<span class=\\'photo-preview-placeholder\\'>📷</span>'">` : '');
       return `<div class="page">
+        <h1>Criar Currículo</h1>
+        <p class="subtitle">Preenche os teus dados. Podes usar voz, adicionar IA e trocar de modelo depois.</p>
         <div class="form-section"><h2>Dados Pessoais</h2>
           <div class="form-group"><label>Nome completo</label><div class="input-with-mic"><input type="text" id="input-nome" value="${esc(d.nome||'')}" placeholder="Ex.: João Manuel Silva Santos"><button class="btn-mic" data-mic="input-nome" aria-label="Voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
           <div class="form-row"><div class="form-group"><label>Cargo / Profissão</label><input type="text" id="input-cargo" value="${esc(d.cargo||'')}" placeholder="Ex.: Engenheiro Informático"></div><div class="form-group"><label>Redes sociais</label><input type="text" id="input-social" value="${esc(d.social||'')}" placeholder="linkedin.com/in/..."></div></div>
@@ -105,9 +121,9 @@
         <div class="preview-container"><div id="preview-frame">${model ? model.render(d) : '<div class="loading-model"><div class="spinner"></div><p>A carregar...</p></div>'}</div></div>
         <div class="export-bar">
           <button class="btn-primary btn-exportar-pdf" onclick="PDFExport.exportPreview('preview-frame','curriculo.pdf')" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>
-          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('curriculo')" aria-label="Partilhar no WhatsApp"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
+          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('curriculo')" aria-label="Partilhar"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
         </div>
-        <button class="btn-secondary" onclick="Router.go('criar-curriculo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
+        <button class="btn-secondary" onclick="navegar('criar-curriculo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
       </div>`;
     }
   });
@@ -140,7 +156,7 @@
       const info = DocTypes.get(tipo);
       const fields = DocTypes.getFormFields(tipo);
       const d = loadDoc();
-      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="Router.go(\'selecionar-doc\')">Voltar</button></div>';
+      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'selecionar-doc\')">Voltar</button></div>';
       return `<div class="page">
         <h1>${esc(info.name)}</h1>
         <p class="subtitle">Preenche os campos abaixo. O documento será formatado automaticamente.</p>
@@ -167,16 +183,16 @@
       const info = DocTypes.get(tipo);
       const d = loadDoc();
       const renderFn = DocTypes.getRenderFn(tipo);
-      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="Router.go(\'selecionar-doc\')">Voltar</button></div>';
+      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'selecionar-doc\')">Voltar</button></div>';
       return `<div class="page">
         <h1>Pré-visualizar</h1>
         <p class="subtitle">Vê como está a ficar o documento. Podes voltar atrás para ajustar.</p>
         <div class="preview-container"><div id="preview-frame">${renderFn ? renderFn(d) : '<div class="loading-model"><div class="spinner"></div><p>A preparar documento...</p></div>'}</div></div>
         <div class="export-bar">
           <button class="btn-primary btn-exportar-pdf" onclick="exportarDocPDF()" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>
-          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('documento')" aria-label="Partilhar no WhatsApp"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
+          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('documento')" aria-label="Partilhar"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
         </div>
-        <button class="btn-secondary" onclick="Router.go('preencher-doc')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
+        <button class="btn-secondary" onclick="navegar('preencher-doc')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
       </div>`;
     }
   });
@@ -286,14 +302,12 @@
   };
 
   window.partilharWhatsApp = function (tipo) {
-    const titulo = document.getElementById('app-title')?.textContent || 'Chave';
     const texto = encodeURIComponent(
       'Criei o meu ' + (tipo === 'curriculo' ? 'currículo' : 'documento') +
       ' com a Chave! 🚀\n\nModelos premium, rápido e sem complicação.\n\n' +
       '👉 ' + window.location.href
     );
-    const url = 'https://wa.me/?text=' + texto;
-    window.open(url, '_blank');
+    window.open('https://wa.me/?text=' + texto, '_blank');
   };
 
   window.partilharLink = function () {
@@ -378,31 +392,40 @@
       const isPaid = Storage.isPaid();
       return `<div class="page">
         <h1>Definições</h1>
-        <div class="form-section">
+        <p class="subtitle">Configura a tua experiência na Chave.</p>
+
+        <div class="settings-section">
           <h2>IA — Melhoria de Texto</h2>
-          <p class="subtitle" style="margin-bottom:12px">O Chave pode melhorar automaticamente as tuas descrições profissionais. Para isso, precisas de configurar um endpoint de IA.</p>
-          <div class="form-group">
-            <label>Endpoint da IA (Cloudflare Worker)</label>
-            <input type="url" id="ai-endpoint" value="${esc(endpoint)}" placeholder="https://teu-worker.workers.dev">
+          <div class="settings-card">
+            <h3>Endpoint de IA</h3>
+            <p>Conecta a Chave a um Cloudflare Worker para melhorar descrições profissionalmente. Sem endpoint, o modo offline é usado.</p>
+            <div class="form-group" style="margin-bottom:8px">
+              <input type="url" id="ai-endpoint" value="${esc(endpoint)}" placeholder="https://teu-worker.workers.dev">
+            </div>
+            <button class="btn-primary" onclick="guardarEndpoint()" style="width:auto">Guardar</button>
+            ${!endpoint
+              ? '<div class="settings-status info"><span>💡</span> Modo offline ativo — melhorias básicas disponíveis</div>'
+              : '<div class="settings-status success"><span>✓</span> Endpoint configurado</div>'}
           </div>
-          <div class="form-group">
-            <button class="btn-primary" onclick="guardarEndpoint()">Guardar</button>
-          </div>
-          ${!endpoint ? `<div class="home-tip" style="margin-top:12px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            <span>Sem endpoint, as melhorias usam um modo offline básico. Configura um <a href="https://dash.cloudflare.com" target="_blank" style="color:#c9a96e">Cloudflare Worker</a> gratuito para IA real.</span>
-          </div>` : `<div class="home-tip" style="margin-top:12px;border-color:rgba(46,204,113,0.3);background:rgba(46,204,113,0.05)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>Endpoint configurado. A IA está pronta a usar.</span>
-          </div>`}
         </div>
-        <div class="form-section">
+
+        <div class="settings-section">
           <h2>Pagamento</h2>
-          <p class="subtitle" style="margin-bottom:12px">${isPaid ? 'Os teus próximos PDFs já podem ser exportados sem marca de água.' : 'A exportação de PDF inclui uma marca de água até confirmares o pagamento.'}</p>
-          ${isPaid ? `<div class="home-tip" style="border-color:rgba(46,204,113,0.3);background:rgba(46,204,113,0.05)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>Pagamento confirmado. Podes exportar sem restrições.</span>
-          </div>` : ''}
+          <div class="settings-card">
+            <h3>Exportação de PDF</h3>
+            <p>Os PDFs gratuitos incluem uma marca de água "Pré-visualização — Chave". Paga via Multicaixa Express para remover a marca.</p>
+            ${isPaid
+              ? '<div class="settings-status success"><span>✓</span> Pagamento confirmado — PDFs sem marca de água</div>'
+              : '<div class="settings-status info"><span>💡</span> Marca de água ativa — <a href="#" onclick="PDFExport.exportPreview(\'settings-preview\',\'teste.pdf\');return false" style="color:#c9a96e">testar exportação</a></div>'}
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h2>Sobre</h2>
+          <div class="settings-card">
+            <h3>Chave — Currículos & Documentos</h3>
+            <p>Versão 1.0.0<br>Feito em Angola, para Angola.<br>Criado pela <strong>AGEA Comercial</strong>.</p>
+          </div>
         </div>
       </div>`;
     }
@@ -447,8 +470,9 @@
   window.scalePreview = scalePreview;
 
   window.addEventListener('resize', function () {
-    if (Router.current === 'pre-visualizar-cv') scalePreview('preview-frame');
-    if (Router.current === 'pre-visualizar-doc') scalePreview('preview-frame');
+    if (Router.current === 'pre-visualizar-cv' || Router.current === 'pre-visualizar-doc') {
+      scalePreview('preview-frame');
+    }
   });
 
   /* ─── START ─── */
@@ -456,6 +480,6 @@
   Router.go('home');
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(function () {});
   }
 })();

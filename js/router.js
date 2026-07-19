@@ -28,5 +28,8 @@ const Router = {
     if (route.onRender) {
       setTimeout(function () { route.onRender(); }, 50);
     }
+    if (window.atualizarNav) {
+      setTimeout(function () { window.atualizarNav(name); }, 10);
+    }
   }
 };
