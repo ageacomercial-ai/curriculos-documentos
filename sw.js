@@ -1,8 +1,9 @@
-const CACHE_NAME = 'curriculos-v2';
+const CACHE_NAME = 'chave-v1';
 
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './css/tokens.css',
   './css/app.css',
   './css/models/classico.css',
   './css/models/moderno.css',
@@ -11,6 +12,10 @@ const PRECACHE_URLS = [
   './css/models/minimalista.css',
   './css/models/doc/documentos.css',
   './js/router.js',
+  './js/storage.js',
+  './js/pdf-export.js',
+  './js/payment.js',
+  './js/ai.js',
   './js/models/registry.js',
   './js/models/cv/classico.js',
   './js/models/cv/moderno.js',

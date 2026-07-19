@@ -1,0 +1,21 @@
+:root {
+  --brand-navy: #1a2332;
+  --brand-navy-light: #2a3a4e;
+  --brand-gold: #c9a96e;
+  --brand-gold-light: #e0c99a;
+  --brand-cream: #f8f6f3;
+  --brand-cream-dark: #f0ece4;
+  --brand-white: #ffffff;
+  --brand-text: #2c3e50;
+  --brand-text-light: #7f8c8d;
+  --brand-text-muted: #aab3bc;
+  --brand-border: #e0ddd9;
+  --brand-radius: 12px;
+  --brand-radius-sm: 8px;
+  --brand-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --brand-shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --brand-header-h: 56px;
+  --brand-font-serif: 'Playfair Display', Georgia, serif;
+  --brand-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --brand-watermark: "Chave";
+}
