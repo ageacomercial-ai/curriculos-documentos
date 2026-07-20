@@ -27,7 +27,7 @@
       const canvas = await html2canvas(element, {
         scale: scale,
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
         width: element.scrollWidth,

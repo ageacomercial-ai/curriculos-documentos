@@ -689,6 +689,7 @@
     title: 'Criar Currículo',
     render: function () {
       return '<div class="page">' +
+        '<button class="btn-back" onclick="navegar(\'home\')">← Voltar</button>' +
         '<h1>Criar Currículo / CV</h1>' +
         '<p class="subtitle">Como queres criar o teu documento?</p>' +
         '<div class="choice-cards" style="margin-top:20px">' +
@@ -714,6 +715,7 @@
       var profile = Storage.getProfile();
       if (profile.nome) {
         return '<div class="page">' +
+          '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
           '<h1>Usar dados do perfil?</h1>' +
           '<p class="subtitle">Tens dados guardados no teu perfil. Queres usá-los neste currículo?</p>' +
           '<div class="choice-cards" style="margin-top:20px">' +
@@ -736,6 +738,7 @@
     var modelos = ModelRegistry.list('cv');
     var demoData = gerarDadosDemoCV();
     return '<div class="page">' +
+      '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
       '<h1>Escolher Modelo</h1>' +
       '<p class="subtitle">Vê os currículos preenchidos com dados de exemplo. O teu conteúdo substituirá estes.</p>' +
       '<div class="model-preview-grid">' +
@@ -818,6 +821,7 @@
     title: 'Outros Documentos',
     render: function () {
       return '<div class="page">' +
+        '<button class="btn-back" onclick="navegar(\'home\')">← Voltar</button>' +
         '<h1>Outros Documentos</h1>' +
         '<p class="subtitle">Que documento precisas de deixar feito?</p>' +
         '<div class="card-grid">' +
@@ -839,6 +843,7 @@
     title: 'Assistente CV',
     render: function () {
       return '<div class="page">' +
+        '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
         '<h1>Assistente de Criação</h1>' +
         '<p class="subtitle">Responde às perguntas abaixo para gerarmos o teu CV.</p>' +
         '<div id="wizard-cv-container">' +
@@ -883,6 +888,56 @@
     var docId = Storage.createDoc('cv', 'CV ' + data.nome.split(' ')[0], 'classico');
     Storage.saveDocData(docId, data);
     Router.go('editar-doc?id=' + docId);
+  };
+
+  /* ─── WIZARD DOC: QUERO AJUDA (documentos) ─── */
+
+  Router.register('wizard-doc', {
+    title: 'Novo Documento',
+    render: function () {
+      var params = Router.getParams();
+      var tipoId = params.tipo;
+      if (!tipoId) return '<div class="page"><p>Tipo de documento não especificado.</p><button class="btn-back" onclick="Router.go(\'outros-documentos\')">← Voltar</button></div>';
+      var info = DocTypes.get(tipoId);
+      if (!info) return '<div class="page"><p>Documento não encontrado.</p><button class="btn-back" onclick="Router.go(\'outros-documentos\')">← Voltar</button></div>';
+      return '<div class="page">' +
+        '<button class="btn-back" onclick="Router.go(\'outros-documentos\')">← Voltar</button>' +
+        '<h1>' + esc(info.name) + '</h1>' +
+        '<p class="subtitle">Preenche os dados abaixo para gerar o documento.</p>' +
+        '<div class="wizard-doc-form" id="wizard-doc-form">' +
+          gerarFormDoc(tipoId) +
+        '</div>' +
+      '</div>';
+    }
+  });
+
+  function gerarFormDoc(tipoId) {
+    var fields = DocTypes.getFormFields(tipoId);
+    if (!fields || !fields.length) return '<p>Não existem campos definidos para este documento.</p>';
+    return fields.map(function (f) {
+      return '<div class="form-group">' +
+        '<label>' + esc(f.label) + '</label>' +
+        (f.type === 'textarea'
+          ? '<textarea id="wizdoc-' + f.key + '" class="wizard-doc-field" rows="4" placeholder="' + esc(f.placeholder || '') + '"></textarea>'
+          : '<input type="' + (f.type === 'date' ? 'date' : 'text') + '" id="wizdoc-' + f.key + '" class="wizard-doc-field" placeholder="' + esc(f.placeholder || '') + '">') +
+      '</div>';
+    }).join('') +
+    '<button class="btn-primary" onclick="gerarDocDaWizard(\'' + tipoId + '\')" style="margin-top:16px">Gerar Documento</button>';
+  }
+
+  window.gerarDocDaWizard = function (tipoId) {
+    var fields = DocTypes.getFormFields(tipoId);
+    if (!fields) return;
+    var data = {};
+    fields.forEach(function (f) {
+      var el = document.getElementById('wizdoc-' + f.key);
+      if (el) data[f.key] = el.value;
+    });
+    var info = DocTypes.get(tipoId);
+    var docId = Storage.createDoc('doc', info ? info.name : 'Documento');
+    Storage.updateDoc(docId, { docType: tipoId });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId + '&tipo=' + tipoId);
   };
 
   /* ─── EDITAR DOCUMENTO ─── */
@@ -1507,22 +1562,24 @@
     render: function () {
       var plans = CONFIG.plans;
       var banks = CONFIG.banks;
-      var currentPlan = localStorage.getItem('tf_plan') || 'avulso';
+      var selectedKey = localStorage.getItem('tf_selected_plan') || '';
 
       var planCards = Object.keys(plans).map(function (key) {
         var p = plans[key];
-        var isCurrent = currentPlan === key;
+        var isSelected = selectedKey === key;
         var price = p.price || 0;
-        return '<div class="plan-card' + (isCurrent ? ' selected' : '') + '" onclick="selecionarPlano(\'' + key + '\')">' +
+        return '<div class="plan-card' + (isSelected ? ' selected' : '') + '" onclick="selecionarPlano(\'' + key + '\')" data-plan="' + key + '">' +
           '<div class="plan-card-header">' +
             '<h3>' + esc(p.name) + '</h3>' +
             '<span class="plan-price">' + price + ' Kz</span>' +
           '</div>' +
           '<div class="plan-docs">' + (p.docs >= 100 ? 'Documentos ilimitados' : 'Até ' + p.docs + ' documentos') + '</div>' +
           (p.desc ? '<div class="plan-desc">' + esc(p.desc) + '</div>' : '') +
-          (isCurrent ? '<span class="plan-badge">Plano atual</span>' : '') +
+          (isSelected ? '<span class="plan-badge">Selecionado</span>' : '') +
         '</div>';
       }).join('');
+
+      var hasSelected = selectedKey ? '' : ' style="display:none"';
 
       var bankAccordion = banks.map(function (b, i) {
         var isMCX = b.id === 'multicaixa';
@@ -1558,19 +1615,21 @@
         '<h1>Planos</h1>' +
         '<p class="subtitle">Escolhe o plano ideal para ti. Sem fidelização.</p>' +
         '<div class="plans-grid">' + planCards + '</div>' +
-        '<div class="activation-area">' +
-          '<h3>Já tens um código de ativação?</h3>' +
-          '<p>Insere o código que recebeste no WhatsApp para ativar o teu plano.</p>' +
-          '<div class="activation-row">' +
-            '<input type="text" id="activation-code-input" placeholder="TF-XXXXXX" maxlength="11" style="text-transform:uppercase">' +
-            '<button onclick="ativarCodigo()">Ativar</button>' +
+        '<div class="payment-section" id="payment-section"' + hasSelected + '>' +
+          '<div class="activation-area">' +
+            '<h3>Já tens um código de ativação?</h3>' +
+            '<p>Insere o código que recebeste no WhatsApp para ativar o teu plano.</p>' +
+            '<div class="activation-row">' +
+              '<input type="text" id="activation-code-input" placeholder="TF-XXXXXX" maxlength="11" style="text-transform:uppercase">' +
+              '<button onclick="ativarCodigo()">Ativar</button>' +
+            '</div>' +
+            '<div id="activation-status" style="margin-top:8px;font-size:13px;color:var(--tf-text-secondary)"></div>' +
           '</div>' +
-          '<div id="activation-status" style="margin-top:8px;font-size:13px;color:var(--tf-text-secondary)"></div>' +
+          '<h2 style="margin:30px 0 16px;font-family:var(--tf-font-serif);font-size:18px;">Transferência Bancária</h2>' +
+          '<p class="subtitle">Após escolher o plano, faz o pagamento por transferência e envia-nos o comprovativo.</p>' +
+          '<div class="bank-accordion">' + bankAccordion + '</div>' +
+          '<div style="text-align:center;margin-top:20px;font-size:13px;color:var(--tf-text-muted)">Perguntas? Fala connosco pelo <a href="' + whatsappURL() + '" target="_blank" style="color:var(--tf-accent)">WhatsApp</a></div>' +
         '</div>' +
-        '<h2 style="margin:30px 0 16px;font-family:var(--tf-font-serif);font-size:18px;">Transferência Bancária</h2>' +
-        '<p class="subtitle">Após escolher o plano, faz o pagamento por transferência e envia-nos o comprovativo.</p>' +
-        '<div class="bank-accordion">' + bankAccordion + '</div>' +
-        '<div style="text-align:center;margin-top:20px;font-size:13px;color:var(--tf-text-muted)">Perguntas? Fala connosco pelo <a href="' + whatsappURL() + '" target="_blank" style="color:var(--tf-accent)">WhatsApp</a></div>' +
       '</div>';
     }
   });
@@ -1657,10 +1716,27 @@
 
   window.selecionarPlano = function (key) {
     localStorage.setItem('tf_selected_plan', key);
-    document.querySelectorAll('.plan-card').forEach(function (c) { c.classList.remove('selected'); });
+    document.querySelectorAll('.plan-card').forEach(function (c) { c.classList.remove('selected');
+      var badge = c.querySelector('.plan-badge');
+      if (badge) badge.remove();
+    });
     var cards = document.querySelectorAll('.plan-card');
     var idx = Object.keys(CONFIG.plans).indexOf(key);
-    if (cards[idx]) cards[idx].classList.add('selected');
+    if (cards[idx]) {
+      cards[idx].classList.add('selected');
+      if (!cards[idx].querySelector('.plan-badge')) {
+        var badge = document.createElement('span');
+        badge.className = 'plan-badge';
+        badge.textContent = 'Selecionado';
+        cards[idx].appendChild(badge);
+      }
+    }
+    var paymentSection = document.getElementById('payment-section');
+    if (paymentSection) paymentSection.style.display = 'block';
+    // Scroll to payment area on mobile
+    setTimeout(function () {
+      if (paymentSection) paymentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
   };
 
   window.toggleBank = function (headerEl) {
@@ -1805,10 +1881,10 @@
         sessionStorage.setItem('tf_admin_auth', 'true');
         Router.go('admin');
       } else {
-        errorEl.textContent = 'PIN incorreto ou administração indisponível.';
+        errorEl.textContent = data.message || 'PIN de administrador incorreto.';
       }
     } catch (e) {
-      errorEl.textContent = 'Erro de conexão. Verifica se o servidor está ativo.';
+      errorEl.textContent = 'Não foi possível validar o acesso. Tenta novamente.';
     }
     btn.disabled = false;
     btn.textContent = 'Entrar';
