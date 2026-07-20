@@ -1747,14 +1747,17 @@
   };
 
   /* ─── ROUTE HOOK: update document title ─── */
-  var origGo = Router.go;
+  var origGo = Router.go.bind(Router);
   Router.go = function (route) {
-    origGo(route);
-    var cleanName = route.split('?')[0];
-    var routeDef = Router.routes[cleanName];
-    if (routeDef && routeDef.title) {
-      document.title = routeDef.title + ' — ' + CONFIG.brand.name;
-    }
+    origGo(route).then(function () {
+      var cleanName = route.split('?')[0];
+      var routeDef = Router.routes[cleanName];
+      if (routeDef && routeDef.title) {
+        document.title = routeDef.title + ' — ' + CONFIG.brand.name;
+      }
+    }).catch(function (err) {
+      console.error('Router.go error:', err);
+    });
   };
 
   /* ─── START ─── */
