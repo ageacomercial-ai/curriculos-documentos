@@ -59,7 +59,7 @@
         pdf.setTextColor(200, 200, 200);
         for (let y = 50; y < 280; y += 60) {
           for (let x = 20; x < 190; x += 70) {
-            pdf.text('Pré-visualização — Chave', x, y, { angle: 30 });
+            pdf.text('Pré-visualização — Tá Feito', x, y, { angle: 30 });
           }
         }
         pdf.setTextColor(0, 0, 0);

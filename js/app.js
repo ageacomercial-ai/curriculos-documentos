@@ -1,12 +1,78 @@
 (function () {
   function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 
-  var loadCV = function() { return Storage.loadCV(); };
-  var saveCV = function(d) { Storage.saveCV(d); };
-  var loadDoc = function() { return Storage.loadDoc(); };
-  var saveDoc = function(d) { Storage.saveDoc(d); };
-  var getDocType = function() { return Storage.getDocType(); };
-  var setDocType = function(t) { Storage.setDocType(t); };
+  /* ─── LOGO SVG ─── */
+  function logoSVG() {
+    return '<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="2" y="2" width="36" height="36" rx="8" stroke="#2ecc71" stroke-width="3" fill="none"/>' +
+      '<path d="M12 20 L18 26 L28 14" stroke="#2ecc71" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+    '</svg>';
+  }
+
+  window.renderLogoSVG = logoSVG;
+
+  /* ─── MASCOT SVG ─── */
+  function mascotSVG(size, expression) {
+    expression = expression || 'smile';
+    var eyes = expression === 'wink'
+      ? '<ellipse cx="15" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/><path d="M24 17 L27 20 L30 17" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
+      : '<ellipse cx="15" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/><ellipse cx="27" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/>';
+    var mouth = expression === 'smile'
+      ? '<path d="M16 26 Q21 31 26 26" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round" fill="none"/>'
+      : expression === 'wink'
+        ? '<path d="M16 26 Q21 30 26 26" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
+        : '<path d="M18 26 Q21 22 24 26" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>';
+    return '<svg class="tf-mascot-svg" viewBox="0 0 42 42" width="' + size + '" height="' + size + '" fill="none">' +
+      '<circle cx="21" cy="21" r="19" fill="#2ecc71" opacity="0.12"/>' +
+      '<rect x="8" y="8" width="26" height="26" rx="6" fill="#2ecc71" opacity="0.2"/>' +
+      eyes +
+      mouth +
+    '</svg>';
+  }
+
+  window.mascotSVG = mascotSVG;
+
+  /* ─── INJECT LOGO ─── */
+  function injectLogo() {
+    var el = document.getElementById('brand-logo');
+    if (el) el.innerHTML = logoSVG();
+  }
+
+  /* ─── TEMA ─── */
+
+  function getTheme() {
+    return localStorage.getItem('tf_theme') || 'system';
+  }
+
+  window.setTheme = function (theme) {
+    localStorage.setItem('tf_theme', theme);
+    applyTheme(theme);
+  };
+
+  function applyTheme(theme) {
+    if (theme === 'system') {
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+    // Update theme-color meta
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === 'dark' ? '#111120' : '#1a1a2e';
+  }
+
+  function initTheme() {
+    var theme = getTheme();
+    applyTheme(theme);
+    // Listen for system changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (getTheme() === 'system') applyTheme('system');
+    });
+  }
+
+  function themeIcon(theme) {
+    if (theme === 'light') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+    if (theme === 'dark') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+  }
 
   /* ─── NAVEGAÇÃO ─── */
 
@@ -17,442 +83,1635 @@
   }
 
   window.navegar = function (route) {
-    const cur = Router.current;
-    if (cur === 'criar-curriculo' || cur === 'preencher-doc') {
-      if (cur === 'criar-curriculo') guardarCV();
-      if (cur === 'preencher-doc') guardarDoc();
-    }
     Router.go(route);
   };
+
+  /* ─── AUTO-SAVE ─── */
+
+  var saveTimer = null;
+
+  function mostrarSaveStatus(texto) {
+    var el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = texto;
+    el.classList.add('visible');
+    if (texto.indexOf('✓') === 0) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { el.classList.remove('visible'); }, 3000);
+    }
+  }
+
+  function autosave() {
+    mostrarSaveStatus('Guardando...');
+    // The actual save is triggered by input events - this just shows the indicator
+    setTimeout(function () { mostrarSaveStatus('✓ Guardado'); }, 400);
+  }
+
+  function saudacao() {
+    var h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
 
   /* ─── HOME / DASHBOARD ─── */
 
   Router.register('home', {
     title: 'Início',
     render: function () {
-      var d = loadCV();
-      var hasCV = Object.keys(d).length > 1;
-      var expCount = (d.experiencias || []).filter(function (e) { return e.cargo; }).length;
-      var totalDocs = DocTypes ? DocTypes.tipos.length : 0;
-      var isPaid = Storage ? Storage.isPaid() : false;
+      var nome = Storage.getNome();
+      var profile = Storage.getProfile();
+      var comp = Storage.profileCompletion();
+      var docs = Storage.listDocs();
+      var recentes = docs.slice(0, 3);
+      var isPaid = Storage.isPaid();
+      var docCount = docs.length;
+      var expCount = (profile.experiencias || []).filter(function (e) { return e.cargo; }).length;
+      var formCount = (profile.formacoes || []).filter(function (f) { return f.curso; }).length;
 
       return '<div class="page">' +
         '<div class="dashboard-hero">' +
           '<div class="dashboard-emblem">' +
-            '<svg viewBox="0 0 44 44" fill="none">' +
-              '<rect x="2" y="2" width="40" height="40" rx="10" stroke="#c9a96e" stroke-width="2.5" fill="none"/>' +
-              '<path d="M22 10 L22 34 M12 22 L32 22" stroke="#c9a96e" stroke-width="2.5" stroke-linecap="round"/>' +
-              '<circle cx="22" cy="22" r="5" fill="#c9a96e"/>' +
-            '</svg>' +
+            logoSVG() +
           '</div>' +
-          '<h1>Bem-vindo à Chave</h1>' +
-          '<p class="subtitle">Cria currículos, declarações, cartas e contratos com <strong>modelos premium</strong> — tudo num só lugar.</p>' +
+          '<h1>' + saudacao() + ', ' + esc(nome.split(' ')[0]) + ' ' + renderMascot(36, 'mascot-bounce') + '</h1>' +
+          '<p class="subtitle">O que precisas de deixar <strong>feito</strong> hoje?</p>' +
         '</div>' +
-        '<div class="dashboard-stats">' +
-          '<div class="stat-card"><div class="stat-value">' + (hasCV ? '1' : '0') + '</div><div class="stat-label">Currículos</div></div>' +
-          '<div class="stat-card"><div class="stat-value">' + expCount + '</div><div class="stat-label">Experiências</div></div>' +
-          '<div class="stat-card"><div class="stat-value">' + totalDocs + '</div><div class="stat-label">Documentos</div></div>' +
-          '<div class="stat-card"><div class="stat-value">' + (isPaid ? '✓' : '—') + '</div><div class="stat-label">Pagamento</div></div>' +
-        '</div>' +
-        '<div class="card-grid">' +
-          '<div class="card" onclick="navegar(\'criar-curriculo\')" style="animation-delay:0.1s">' +
-            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
-            '<h3>Criar Currículo</h3><p>Escolhe entre 5 modelos premium e preenche os teus dados.</p>' +
+        '<button class="btn-primary btn-create" onclick="navegar(\'novo-documento\')">' +
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Criar novo documento' +
+        '</button>' +
+
+        // Profile completion
+        '<div class="profile-completion-card" onclick="navegar(\'perfil\')">' +
+          '<div class="profile-completion-header">' +
+            '<h3>Perfil Profissional</h3>' +
+            '<span class="profile-completion-pct">' + comp.pct + '%</span>' +
           '</div>' +
-          '<div class="card" onclick="navegar(\'selecionar-doc\')" style="animation-delay:0.2s">' +
-            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>' +
-            '<h3>Criar Documento</h3><p>Declarações, cartas, contratos e requerimentos formais.</p>' +
+          '<div class="profile-completion-bar">' +
+            '<div class="profile-completion-fill" style="width:' + comp.pct + '%"></div>' +
           '</div>' +
+          '<span class="profile-completion-link">' + (comp.pct < 100 ? 'Completar perfil →' : 'Ver perfil →') + '</span>' +
         '</div>' +
-        (hasCV ? '<div class="home-resume"><button class="btn-primary" onclick="navegar(\'pre-visualizar-cv\')" style="animation-delay:0.25s"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Continuar último currículo</button></div>' : '') +
+
+        // Recent documents
+        (recentes.length > 0
+          ? '<div class="recent-docs"><h3>Documentos Recentes</h3>' +
+            recentes.map(function (d) {
+              var tipoLabel = d.type === 'cv' ? 'CV' : 'Documento';
+              return '<div class="recent-doc-item" onclick="abrirDoc(\'' + d.id + '\')">' +
+                '<div class="recent-doc-icon">' +
+                  (d.type === 'cv'
+                    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+                    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg>') +
+                '</div>' +
+                '<div class="recent-doc-info">' +
+                  '<strong>' + esc(d.name) + '</strong>' +
+                  '<span>' + Storage.timeAgo(d.updatedAt) + '</span>' +
+                '</div>' +
+                '<button class="btn-icon-sm" onclick="event.stopPropagation();abrirDoc(\'' + d.id + '\')" aria-label="Abrir">' +
+                  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+                '</button>' +
+              '</div>';
+            }).join('') +
+            '<div class="recent-docs-footer"><a href="#" onclick="navegar(\'documentos\');return false">Ver todos os documentos →</a></div>' +
+          '</div>'
+          : '<div class="empty-state"><p>Ainda não tem documentos. Crie o primeiro!</p></div>'
+        ) +
+
+        // Tips
         '<div class="home-tip">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
-          '<span>Podes usar voz para preencher campos — toca no 🎤 ao lado dos inputs</span>' +
+          '<span>Preencha o seu perfil uma vez e reuse os dados em todos os documentos.</span>' +
         '</div>' +
       '</div>';
     }
   });
 
-  /* ─── CRIAR CURRÍCULO ─── */
+  /* ─── DOCUMENTOS ─── */
 
-  Router.register('criar-curriculo', {
-    title: 'Criar Currículo',
-    render() {
-      const d = loadCV();
-      const fotoPreview = d.foto && d.foto.startsWith('data:')
-        ? `<img src="${esc(d.foto)}" alt="" class="photo-preview">`
-        : (d.foto ? `<img src="${esc(d.foto)}" alt="" class="photo-preview" onerror="this.parentElement.innerHTML='<span class=\\'photo-preview-placeholder\\'>📷</span>'">` : '');
-      return `<div class="page">
-        <h1>Criar Currículo</h1>
-        <p class="subtitle">Preenche os teus dados. Podes usar voz, adicionar IA e trocar de modelo depois.</p>
-        <div class="form-section"><h2>Dados Pessoais</h2>
-          <div class="form-group"><label>Nome completo</label><div class="input-with-mic"><input type="text" id="input-nome" value="${esc(d.nome||'')}" placeholder="Ex.: João Manuel Silva Santos"><button class="btn-mic" data-mic="input-nome" aria-label="Voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
-          <div class="form-row"><div class="form-group"><label>Cargo / Profissão</label><input type="text" id="input-cargo" value="${esc(d.cargo||'')}" placeholder="Ex.: Engenheiro Informático"></div><div class="form-group"><label>Redes sociais</label><input type="text" id="input-social" value="${esc(d.social||'')}" placeholder="linkedin.com/in/..."></div></div>
-          <div class="form-group"><label>Foto</label><div class="photo-upload"><div class="photo-preview-wrap" id="photo-preview-wrap">${fotoPreview || '<span class="photo-preview-placeholder">📷</span>'}</div><div class="photo-upload-fields"><button class="btn-secondary btn-small" onclick="document.getElementById('file-foto').click()">Escolher ficheiro</button><input type="file" id="file-foto" accept="image/*" style="display:none"><input type="url" id="input-foto" value="${esc(d.foto&&!d.foto.startsWith('data:')?d.foto:'')}" placeholder="Ou URL da foto..." style="margin-top:6px;font-size:13px"></div></div></div>
-          <div class="form-group"><label>Resumo profissional</label><div class="input-with-mic textarea-mic"><textarea id="input-resumo" placeholder="Conta a tua história profissional... Podes usar o microfone para ditar." rows="4">${esc(d.resumo||'')}</textarea><button class="btn-mic" data-mic="input-resumo" aria-label="Voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
-          <div class="form-row"><div class="form-group"><label>Email</label><input type="email" id="input-email" value="${esc(d.email||'')}" placeholder="exemplo@email.com"></div><div class="form-group"><label>Telefone</label><input type="tel" id="input-telefone" value="${esc(d.telefone||'')}" placeholder="+244 900 000 000"></div></div>
-          <div class="form-group"><label>Morada</label><input type="text" id="input-morada" value="${esc(d.morada||'')}" placeholder="Ex.: Luanda, Angola"></div></div>
-        <div class="form-section"><h2>Experiência Profissional</h2><div id="exp-container">${(d.experiencias||[{cargo:'',empresa:'',inicio:'',fim:'',descricao:''}]).map((e,i) => renderExp(e,i)).join('')}</div><button class="btn-secondary add-btn" onclick="adicionarExp()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar experiência</button></div>
-        <div class="form-section"><h2>Formação Académica</h2><div id="formacao-container">${(d.formacoes||[{curso:'',instituicao:'',inicio:'',fim:''}]).map((f,i) => renderForm(f,i)).join('')}</div><button class="btn-secondary add-btn" onclick="adicionarForm()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar formação</button></div>
-        <div class="form-section"><h2>Competências</h2><div id="skills-container">${(d.competencias||[{nome:'',nivel:'3'}]).map((s,i) => renderSkill(s,i)).join('')}</div><button class="btn-secondary add-btn" onclick="adicionarSkill()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar competência</button></div>
-        <div class="form-section"><h2>Idiomas</h2><div id="idiomas-container">${(d.idiomas||[{idioma:'',nivel:'Iniciante'}]).map((l,i) => renderIdioma(l,i)).join('')}</div><button class="btn-secondary add-btn" onclick="adicionarIdioma()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar idioma</button></div>
-        <div class="form-actions"><button class="btn-primary" onclick="guardarEprevCV()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button></div>
-      </div>`;
-    },
-    onLeave() { guardarCV(); }
-  });
+  Router.register('documentos', {
+    title: 'Documentos',
+    render: function () {
+      var docs = Storage.listDocs();
 
-  /* ─── PRÉ-VISUALIZAR CV ─── */
+      function renderDoc(d) {
+        var tipoLabel = d.type === 'cv' ? 'CV' : 'Documento';
+        var modelName = d.model || '';
+        var cor = d.type === 'cv' ? '#2ecc71' : '#2a3a4e';
+        return '<div class="doc-item">' +
+          '<div class="doc-item-icon" style="background:' + cor + '">' +
+            (d.type === 'cv'
+              ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+              : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg>') +
+          '</div>' +
+          '<div class="doc-item-info">' +
+            '<strong>' + esc(d.name) + '</strong>' +
+            '<span>' + tipoLabel + (modelName ? ' · ' + esc(modelName) : '') + ' · ' + Storage.timeAgo(d.updatedAt) + '</span>' +
+          '</div>' +
+          '<div class="doc-item-actions">' +
+            '<button class="btn-doc-action" onclick="event.stopPropagation();abrirDoc(\'' + d.id + '\')" title="Abrir">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+            '</button>' +
+            '<button class="btn-doc-action" onclick="event.stopPropagation();duplicarDoc(\'' + d.id + '\')" title="Duplicar">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '</button>' +
+            '<button class="btn-doc-action btn-doc-action-danger" onclick="event.stopPropagation();confirmarEliminarDoc(\'' + d.id + '\')" title="Eliminar">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }
 
-  Router.register('pre-visualizar-cv', {
-    title: 'Pré-visualizar',
-    onRender: function () { scalePreview('preview-frame'); },
-    render() {
-      const d = loadCV();
-      const modelos = ModelRegistry.list('cv');
-      const atual = d.modelo || 'classico';
-      const model = ModelRegistry.get('cv', atual) || modelos[0];
-      const suggestion = AI && AI.suggestModel ? AI.suggestModel(d.cargo) : null;
-      return `<div class="page">
-        <h1>Pré-visualizar</h1>
-        <p class="subtitle">Vê como está a ficar o teu currículo. Podes trocar de modelo e voltar a editar.</p>
-        ${suggestion && suggestion.model !== atual ? `<div class="model-suggestion" onclick="selecionarModelo('${suggestion.model}')"><strong>💡 Sugestão:</strong> ${esc(suggestion.reason)} <span class="model-suggestion-link">Experimentar ${modelos.find(m => m.id === suggestion.model)?.name || suggestion.model}</span></div>` : ''}
-        <div class="model-selector">${modelos.map(m => `<div class="model-option ${m.id === atual ? 'selected' : ''}" onclick="selecionarModelo('${m.id}')"><span class="model-dot"></span> ${esc(m.name)}</div>`).join('')}</div>
-        <div class="preview-container"><div id="preview-frame">${model ? model.render(d) : '<div class="loading-model"><div class="spinner"></div><p>A carregar...</p></div>'}</div></div>
-        <div class="export-bar">
-          <button class="btn-primary btn-exportar-pdf" onclick="PDFExport.exportPreview('preview-frame','curriculo.pdf')" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>
-          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('curriculo')" aria-label="Partilhar"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
-        </div>
-        <button class="btn-secondary" onclick="navegar('criar-curriculo')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
-      </div>`;
+      return '<div class="page page-docs">' +
+        '<div class="page-header-row">' +
+          '<h1>Documentos</h1>' +
+          '<button class="btn-create-sm" onclick="navegar(\'novo-documento\')">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo' +
+          '</button>' +
+        '</div>' +
+        (docs.length > 0
+          ? '<div class="doc-list">' + docs.map(renderDoc).join('') + '</div>'
+          : '<div class="empty-state"><p>Nenhum documento ainda.</p><button class="btn-primary" onclick="navegar(\'novo-documento\')">Criar primeiro documento</button></div>'
+        ) +
+      '</div>';
     }
   });
 
-  /* ─── SELECIONAR DOCUMENTO ─── */
+  /* ─── PERFIL CENTRAL ─── */
+
+  Router.register('perfil', {
+    title: 'Meu Perfil',
+    render: function () {
+      var p = Storage.getProfile();
+      var comp = Storage.profileCompletion();
+      var niveisCompetencia = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'];
+      var niveisIdioma = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
+      var fotoPreview = p.foto && p.foto.startsWith('data:')
+        ? '<img src="' + esc(p.foto) + '" alt="" class="photo-preview">'
+        : (p.foto ? '<img src="' + esc(p.foto) + '" alt="" class="photo-preview" onerror="this.parentElement.innerHTML=\'<span class=\\\'photo-preview-placeholder\\\'>📷</span>\'">' : '');
+
+      return '<div class="page">' +
+        '<div class="page-header-row">' +
+          '<h1>Meu Perfil</h1>' +
+          '<span class="profile-badge">' + comp.pct + '%</span>' +
+        '</div>' +
+        '<p class="subtitle">Preencha os seus dados uma vez. Eles serão usados em todos os seus documentos.</p>' +
+        '<div class="profile-completion-bar" style="margin-bottom:20px"><div class="profile-completion-fill" style="width:' + comp.pct + '%"></div></div>' +
+
+        // Photo
+        '<div class="form-section"><h2>Foto</h2>' +
+          '<div class="photo-upload">' +
+            '<div class="photo-preview-wrap" id="perfil-photo-preview-wrap">' + (fotoPreview || '<span class="photo-preview-placeholder">📷</span>') + '</div>' +
+            '<div class="photo-upload-fields">' +
+              '<button class="btn-secondary btn-small" onclick="document.getElementById(\'perfil-file-foto\').click()">Escolher ficheiro</button>' +
+              '<input type="file" id="perfil-file-foto" accept="image/*" style="display:none">' +
+              '<input type="url" id="perfil-input-foto" value="' + esc(p.foto && !p.foto.startsWith('data:') ? p.foto : '') + '" placeholder="Ou URL da foto..." style="margin-top:6px;font-size:13px">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Personal info
+        '<div class="form-section"><h2>Informações Pessoais</h2>' +
+          '<div class="form-group"><label>Nome completo</label><input type="text" id="perfil-nome" value="' + esc(p.nome) + '" placeholder="Ex.: Adelino Graça"></div>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Cargo / Profissão</label><input type="text" id="perfil-cargo" value="' + esc(p.cargo) + '" placeholder="Ex.: Diretor Executivo"></div>' +
+            '<div class="form-group"><label>Links profissionais</label><input type="text" id="perfil-social" value="' + esc(p.social) + '" placeholder="linkedin.com/in/..."></div>' +
+          '</div>' +
+          '<div class="form-row">' +
+            '<div class="form-group"><label>Email</label><input type="email" id="perfil-email" value="' + esc(p.email) + '" placeholder="exemplo@email.com"></div>' +
+            '<div class="form-group"><label>Telefone</label><input type="tel" id="perfil-telefone" value="' + esc(p.telefone) + '" placeholder="+244 900 000 000"></div>' +
+          '</div>' +
+          '<div class="form-group"><label>Morada</label><input type="text" id="perfil-morada" value="' + esc(p.morada) + '" placeholder="Ex.: Luanda, Angola"></div>' +
+          '<div class="form-group"><label>Resumo profissional</label><textarea id="perfil-resumo" placeholder="Conte a sua história profissional..." rows="4">' + esc(p.resumo) + '</textarea></div>' +
+        '</div>' +
+
+        // Experience
+        '<div class="form-section"><h2>Experiência Profissional</h2>' +
+          '<div id="perfil-exp-container">' + (p.experiencias || []).map(function (e, i) {
+            return '<div class="exp-item"><div class="form-row">' +
+              '<div class="form-group"><label>Cargo</label><input type="text" name="perfil-exp-cargo-' + i + '" value="' + esc(e.cargo) + '" placeholder="Ex.: Diretor"></div>' +
+              '<div class="form-group"><label>Empresa</label><input type="text" name="perfil-exp-empresa-' + i + '" value="' + esc(e.empresa) + '" placeholder="Ex.: AGEA Comercial"></div></div>' +
+              '<div class="form-row"><div class="form-group"><label>Início</label><input type="text" name="perfil-exp-inicio-' + i + '" value="' + esc(e.inicio) + '" placeholder="Ex.: 2020"></div>' +
+              '<div class="form-group"><label>Fim</label><input type="text" name="perfil-exp-fim-' + i + '" value="' + esc(e.fim) + '" placeholder="Ex.: Presente"></div></div>' +
+              '<div class="form-group"><label>Descrição</label><textarea name="perfil-exp-descricao-' + i + '" placeholder="Descreva as responsabilidades..." rows="3">' + esc(e.descricao) + '</textarea></div>' +
+              '<button class="btn-remove" onclick="removerExpPerfil(' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-secondary add-btn" onclick="adicionarExpPerfil()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar experiência</button>' +
+        '</div>' +
+
+        // Education
+        '<div class="form-section"><h2>Formação Académica</h2>' +
+          '<div id="perfil-formacao-container">' + (p.formacoes || []).map(function (f, i) {
+            return '<div class="exp-item"><div class="form-row">' +
+              '<div class="form-group"><label>Curso</label><input type="text" name="perfil-form-curso-' + i + '" value="' + esc(f.curso) + '" placeholder="Ex.: Licenciatura"></div>' +
+              '<div class="form-group"><label>Instituição</label><input type="text" name="perfil-form-instituicao-' + i + '" value="' + esc(f.instituicao) + '" placeholder="Ex.: Universidade"></div></div>' +
+              '<div class="form-row"><div class="form-group"><label>Início</label><input type="text" name="perfil-form-inicio-' + i + '" value="' + esc(f.inicio) + '" placeholder="Ex.: 2015"></div>' +
+              '<div class="form-group"><label>Fim</label><input type="text" name="perfil-form-fim-' + i + '" value="' + esc(f.fim) + '" placeholder="Ex.: 2021"></div></div>' +
+              '<button class="btn-remove" onclick="removerFormPerfil(' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-secondary add-btn" onclick="adicionarFormPerfil()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar formação</button>' +
+        '</div>' +
+
+        // Skills
+        '<div class="form-section"><h2>Competências</h2>' +
+          '<div id="perfil-skills-container">' + (p.competencias || []).map(function (s, i) {
+            return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" name="perfil-skill-nome-' + i + '" value="' + esc(s.nome) + '" placeholder="Ex.: Liderança"></div>' +
+              '<div class="form-group" style="width:110px;margin-bottom:0"><label>Nível</label><select name="perfil-skill-nivel-' + i + '">' +
+                niveisCompetencia.map(function (n, ni) { return '<option value="' + ni + '" ' + ((s.nivel == ni) ? 'selected' : '') + '>' + n + '</option>'; }).join('') +
+              '</select></div>' +
+              '<button class="btn-icon-sm" onclick="removerSkillPerfil(' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-secondary add-btn" onclick="adicionarSkillPerfil()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar competência</button>' +
+        '</div>' +
+
+        // Languages
+        '<div class="form-section"><h2>Idiomas</h2>' +
+          '<div id="perfil-idiomas-container">' + (p.idiomas || []).map(function (l, i) {
+            return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" name="perfil-idioma-nome-' + i + '" value="' + esc(l.idioma) + '" placeholder="Ex.: Português"></div>' +
+              '<div class="form-group" style="width:130px;margin-bottom:0"><label>Nível</label><select name="perfil-idioma-nivel-' + i + '">' +
+                niveisIdioma.map(function (n) { return '<option value="' + n + '" ' + (l.nivel === n ? 'selected' : '') + '>' + n + '</option>'; }).join('') +
+              '</select></div>' +
+              '<button class="btn-icon-sm" onclick="removerIdiomaPerfil(' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-secondary add-btn" onclick="adicionarIdiomaPerfil()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar idioma</button>' +
+        '</div>' +
+
+        // Certifications
+        '<div class="form-section"><h2>Certificações</h2>' +
+          '<div id="perfil-cert-container">' + (p.certificacoes || []).map(function (c, i) {
+            return '<div class="exp-item"><div class="form-row">' +
+              '<div class="form-group"><label>Certificação</label><input type="text" name="perfil-cert-nome-' + i + '" value="' + esc(c.nome) + '" placeholder="Ex.: Gestão de Projetos"></div>' +
+              '<div class="form-group"><label>Instituição</label><input type="text" name="perfil-cert-instituicao-' + i + '" value="' + esc(c.instituicao) + '" placeholder="Ex.: PMI"></div></div>' +
+              '<div class="form-group"><label>Data</label><input type="text" name="perfil-cert-data-' + i + '" value="' + esc(c.data) + '" placeholder="Ex.: 2023"></div>' +
+              '<button class="btn-remove" onclick="removerCertPerfil(' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+          }).join('') + '</div>' +
+          '<button class="btn-secondary add-btn" onclick="adicionarCertPerfil()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar certificação</button>' +
+        '</div>' +
+
+        '<div class="form-actions"><button class="btn-primary" onclick="guardarPerfil()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Perfil</button></div>' +
+      '</div>';
+    },
+    onRender: function () {
+      // Setup auto-save on inputs
+      document.querySelectorAll('#app-content input, #app-content textarea, #app-content select').forEach(function (el) {
+        el.removeEventListener('input', autosave);
+        el.addEventListener('input', autosave);
+      });
+    }
+  });
+
+  /* ─── NOVO DOCUMENTO ─── */
+
+  Router.register('novo-documento', {
+    title: 'Novo Documento',
+    render: function () {
+      return '<div class="page">' +
+        '<h1>Novo Documento</h1>' +
+        '<p class="subtitle">Como queres criar o teu documento?</p>' +
+        '<div class="choice-cards" style="margin-top:20px">' +
+          '<div class="choice-card" onclick="Router.go(\'escolher-tipo\')">' +
+            '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>' +
+            '<div class="choice-text"><h3>Quero fazer sozinho</h3><p>Editor livre — escolhes o tipo de documento e escreves à tua maneira.</p></div>' +
+          '</div>' +
+          '<div class="choice-card" onclick="Router.go(\'wizard-ajuda\')">' +
+            '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+            '<div class="choice-text"><h3>Quero ajuda 🤖</h3><p>Respondes a algumas perguntas e a IA gera o documento por ti.</p></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+  });
+
+  /* ─── ESCOLHER TIPO (sozinho) ─── */
+
+  Router.register('escolher-tipo', {
+    title: 'Escolher Tipo',
+    render: function () {
+      return '<div class="page">' +
+        '<h1>Escolher Tipo</h1>' +
+        '<p class="subtitle">O que desejas criar?</p>' +
+        '<div class="card-grid">' +
+          '<div class="card" onclick="iniciarCriarCV()">' +
+            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
+            '<h3>Currículo / CV</h3>' +
+            '<p>Cria um currículo profissional com os teus dados de perfil.</p>' +
+          '</div>' +
+          '<div class="card" onclick="iniciarCriarDoc()">' +
+            '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>' +
+            '<h3>Documento Profissional</h3>' +
+            '<p>Declarações, cartas, contratos, requerimentos e mais.</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+  });
+
+  /* ─── WIZARD: QUERO AJUDA ─── */
+
+  Router.register('wizard-ajuda', {
+    title: 'Assistente IA',
+    render: function () {
+      var wizardState = window._wizardState = window._wizardState || JSON.parse(sessionStorage.getItem('tf_wizard') || 'null') || {
+        step: 0,
+        tipo: null,
+        descricao: '',
+        respostas: {},
+        perguntas: null,
+        perguntaAtual: 0
+      };
+
+      if (wizardState.step === 0) {
+        return renderWizardTipo();
+      }
+      if (wizardState.step === 1) {
+        return renderWizardDescricao();
+      }
+      if (wizardState.step === 2) {
+        return renderWizardPerguntas();
+      }
+      return renderWizardConcluido();
+    },
+    onRender: function () {
+      var state = window._wizardState;
+      if (state.step === 1) {
+        var ta = document.getElementById('wizard-descricao');
+        if (ta) ta.focus();
+      }
+    }
+  });
+
+  function renderWizardTipo() {
+    return '<div class="page wizard-step">' +
+      '<div class="wizard-progress"><span class="wizard-dot active"></span><span class="wizard-dot"></span><span class="wizard-dot"></span><span class="wizard-dot"></span></div>' +
+      '<div class="wizard-question">' + renderMascot(40, 'mascot-wave') + ' O que precisas de deixar feito?</div>' +
+      '<div class="choice-cards">' +
+        '<div class="choice-card" onclick="wizardSetTipo(\'cv\')">' +
+          '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
+          '<div class="choice-text"><h3>Currículo / CV</h3><p>Um currículo profissional completo.</p></div>' +
+        '</div>' +
+        '<div class="choice-card" onclick="wizardSetTipo(\'doc\')">' +
+          '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>' +
+          '<div class="choice-text"><h3>Documento Profissional</h3><p>Declarações, cartas, contratos e mais.</p></div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn-secondary" onclick="cancelarWizard()" style="margin-top:20px">Voltar</button>' +
+    '</div>';
+  }
+
+  function renderWizardDescricao() {
+    return '<div class="page wizard-step">' +
+      '<div class="wizard-progress"><span class="wizard-dot done"></span><span class="wizard-dot active"></span><span class="wizard-dot"></span><span class="wizard-dot"></span></div>' +
+      '<div class="wizard-question">' + renderMascot(40, 'mascot-bounce') + ' Descreve o que precisas...</div>' +
+      '<p style="color:var(--tf-text-secondary);margin-bottom:16px">Conta-nos o que queres criar. Sê específico para a IA te ajudar melhor.</p>' +
+      '<div class="wizard-input"><textarea id="wizard-descricao" placeholder="Ex.: Preciso de uma declaração de trabalho para apresentar na embaixada...">' + esc(window._wizardState.descricao) + '</textarea></div>' +
+      '<div style="display:flex;gap:8px;margin-top:16px">' +
+        '<button class="btn-secondary" onclick="wizardVoltar()">Voltar</button>' +
+        '<button class="btn-primary" onclick="wizardAvancarDescricao()" style="flex:1">' +
+          'Gerar perguntas <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderWizardPerguntas() {
+    var state = window._wizardState;
+    var perguntas = state.perguntas || [];
+    var idx = state.perguntaAtual || 0;
+    if (idx >= perguntas.length) {
+      return renderWizardConcluido();
+    }
+    var pergunta = perguntas[idx];
+    var respostaAtual = state.respostas[pergunta.campo] || '';
+
+    return '<div class="page wizard-step">' +
+      '<div class="wizard-progress">' +
+        perguntas.map(function (_, i) {
+          var cls = i < idx ? 'done' : (i === idx ? 'active' : '');
+          return '<span class="wizard-dot ' + cls + '"></span>';
+        }).join('') +
+      '</div>' +
+      '<div class="wizard-question">' + esc(pergunta.pergunta) + '</div>' +
+      (pergunta.dica ? '<p style="color:var(--tf-text-muted);font-size:13px;margin-bottom:12px">' + esc(pergunta.dica) + '</p>' : '') +
+      '<div class="wizard-input">' +
+        (pergunta.tipo === 'textarea'
+          ? '<textarea id="wizard-resposta" placeholder="' + esc(pergunta.placeholder || '') + '" rows="4">' + esc(respostaAtual) + '</textarea>'
+          : '<input type="text" id="wizard-resposta" value="' + esc(respostaAtual) + '" placeholder="' + esc(pergunta.placeholder || '') + '" style="width:100%;padding:14px;border:2px solid var(--tf-border-color);border-radius:var(--tf-radius);font-size:16px;background:var(--tf-bg-input);color:var(--tf-text-primary);outline:none">'
+        ) +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:16px">' +
+        '<button class="btn-secondary" onclick="wizardPerguntaAnterior()">Anterior</button>' +
+        '<button class="btn-primary" onclick="wizardProximaPergunta()" style="flex:1">' +
+          (idx < perguntas.length - 1 ? 'Seguinte <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' : 'Concluir ✓') +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderWizardConcluido() {
+    return '<div class="page wizard-step" style="text-align:center">' +
+      '<div style="margin:30px 0 20px">' + renderMascot(80, 'mascot-bounce') + '</div>' +
+      '<h2 style="font-family:var(--tf-font-serif);font-size:24px;margin-bottom:8px">Quase lá!</h2>' +
+      '<p style="color:var(--tf-text-secondary);margin-bottom:24px">A IA está a preparar o teu documento com base nas tuas respostas.</p>' +
+      '<button class="btn-primary" onclick="wizardGerarDocumento()" style="width:100%;padding:16px">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Gerar meu documento' +
+      '</button>' +
+      '<button class="btn-secondary" onclick="wizardVoltarInicio()" style="margin-top:12px;width:100%">Voltar ao início</button>' +
+    '</div>';
+  }
+
+  /* ─── WIZARD HELPERS ─── */
+
+  function salvarWizard() {
+    sessionStorage.setItem('tf_wizard', JSON.stringify(window._wizardState || {}));
+  }
+
+  function limparWizard() {
+    window._wizardState = { step: 0, tipo: null, descricao: '', respostas: {}, perguntas: null, perguntaAtual: 0 };
+    sessionStorage.removeItem('tf_wizard');
+  }
+
+  window.wizardSetTipo = function (tipo) {
+    window._wizardState = window._wizardState || {};
+    window._wizardState.tipo = tipo;
+    window._wizardState.step = 1;
+    salvarWizard();
+    Router.go('wizard-ajuda');
+  };
+
+  window.wizardVoltar = function () {
+    var state = window._wizardState;
+    if (state.step > 0) state.step--;
+    salvarWizard();
+    Router.go('wizard-ajuda');
+  };
+
+  window.wizardVoltarInicio = function () {
+    limparWizard();
+    Router.go('novo-documento');
+  };
+
+  window.wizardAvancarDescricao = function () {
+    var ta = document.getElementById('wizard-descricao');
+    if (!ta) return;
+    var desc = ta.value.trim();
+    if (!desc) { ta.focus(); return; }
+    var state = window._wizardState;
+    state.descricao = desc;
+    state.perguntas = gerarPerguntasWizard(state.tipo, desc);
+    state.perguntaAtual = 0;
+    state.respostas = {};
+    state.step = 2;
+    salvarWizard();
+    Router.go('wizard-ajuda');
+  };
+
+  window.wizardProximaPergunta = function () {
+    var el = document.getElementById('wizard-resposta');
+    if (!el) return;
+    var state = window._wizardState;
+    var perguntas = state.perguntas || [];
+    var idx = state.perguntaAtual || 0;
+    var pergunta = perguntas[idx];
+    if (pergunta) {
+      var val = el.value.trim();
+      if (pergunta.obrigatorio && !val) { el.focus(); return; }
+      state.respostas[pergunta.campo] = val;
+    }
+    if (idx < perguntas.length - 1) {
+      state.perguntaAtual = idx + 1;
+      salvarWizard();
+      Router.go('wizard-ajuda');
+    } else {
+      state.step = 3;
+      salvarWizard();
+      Router.go('wizard-ajuda');
+    }
+  };
+
+  window.wizardPerguntaAnterior = function () {
+    var el = document.getElementById('wizard-resposta');
+    if (el) {
+      var state = window._wizardState;
+      var perguntas = state.perguntas || [];
+      var idx = state.perguntaAtual || 0;
+      var pergunta = perguntas[idx];
+      if (pergunta) state.respostas[pergunta.campo] = el.value.trim();
+    }
+    var state = window._wizardState;
+    if (state.perguntaAtual > 0) {
+      state.perguntaAtual--;
+      salvarWizard();
+      Router.go('wizard-ajuda');
+    } else {
+      state.step = 1;
+      salvarWizard();
+      Router.go('wizard-ajuda');
+    }
+  };
+
+  window.wizardGerarDocumento = function () {
+    var state = window._wizardState;
+    if (!state || !state.tipo) { alert('Algo deu errado. Tenta novamente.'); return; }
+
+    var profile = Storage.getProfile();
+    var nome = state.respostas.nomeCompleto || profile.nome || 'Documento';
+    var tipo = state.tipo === 'cv' ? 'cv' : 'doc';
+    var modelId = null;
+
+    if (tipo === 'cv') {
+      var cargo = state.respostas.cargoAtual || profile.cargo || '';
+      modelId = AI && AI.suggestModel ? (AI.suggestModel(cargo) || {}).model || 'classico' : 'classico';
+    }
+
+    var docId = Storage.createDoc(tipo, nome, modelId);
+    var docData = {};
+
+    if (tipo === 'cv') {
+      docData = {
+        nome: state.respostas.nomeCompleto || profile.nome || '',
+        cargo: state.respostas.cargoAtual || profile.cargo || '',
+        email: profile.email || '',
+        telefone: profile.telefone || '',
+        morada: profile.morada || '',
+        resumo: state.respostas.resumoProfissional || profile.resumo || '',
+        social: profile.social || '',
+        experiencias: profile.experiencias || [],
+        formacoes: profile.formacoes || [],
+        competencias: profile.competencias || [],
+        idiomas: profile.idiomas || [],
+        certificacoes: profile.certificacoes || []
+      };
+    } else {
+      docData = {
+        tipo: state.respostas.tipoDocumento || 'Declaração',
+        assunto: state.respostas.assunto || '',
+        destinatario: state.respostas.destinatario || '',
+        conteudo: state.respostas.conteudo || state.descricao,
+        nome: profile.nome || ''
+      };
+    }
+
+    Storage.saveDocData(docId, docData);
+    limparWizard();
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.cancelarWizard = function () {
+    limparWizard();
+    Router.go('novo-documento');
+  };
+
+  function gerarPerguntasWizard(tipo, descricao) {
+    if (tipo === 'cv') {
+      return [
+        { campo: 'nomeCompleto', pergunta: 'Qual é o teu nome completo?', tipo: 'text', placeholder: 'Ex.: Adelino Graça', obrigatorio: true },
+        { campo: 'cargoAtual', pergunta: 'Qual é o teu cargo ou profissão atual?', tipo: 'text', placeholder: 'Ex.: Desenvolvedor Web', obrigatorio: true },
+        { campo: 'resumoProfissional', pergunta: 'Fala um pouco sobre ti profissionalmente (3-5 linhas).', tipo: 'textarea', placeholder: 'Ex.: Profissional com 5 anos de experiência em...', dica: 'Inclui anos de experiência, área de atuação e principais conquistas.', obrigatorio: true },
+        { campo: 'objetivo', pergunta: 'Qual é o teu objetivo profissional para este CV?', tipo: 'text', placeholder: 'Ex.: Conseguir uma posição como Desenvolvedor Sénior', obrigatorio: false },
+        { campo: 'diferenciais', pergunta: 'O que te diferencia dos outros candidatos?', tipo: 'textarea', placeholder: 'Ex.: Domínio de React, Node.js e metodologias ágeis...', dica: 'Destaca 2-3 competências únicas.', obrigatorio: false }
+      ];
+    }
+    // Documento profissional
+    return [
+      { campo: 'tipoDocumento', pergunta: 'Que tipo de documento precisas?', tipo: 'text', placeholder: 'Ex.: Declaração, Carta, Contrato, Requerimento', obrigatorio: true },
+      { campo: 'assunto', pergunta: 'Qual é o assunto do documento?', tipo: 'text', placeholder: 'Ex.: Declaração de Trabalho para Visto', obrigatorio: true },
+      { campo: 'destinatario', pergunta: 'Para quem é o documento?', tipo: 'text', placeholder: 'Ex.: Exma. Senhora Diretora do Serviço de Migração', obrigatorio: true },
+      { campo: 'conteudo', pergunta: 'Descreve o conteúdo principal do documento.', tipo: 'textarea', placeholder: 'Ex.: Venho por meio desta declarar que...', dica: 'Sê detalhado para a IA gerar um documento mais preciso.', obrigatorio: true },
+      { campo: 'infoExtra', pergunta: 'Alguma informação extra que devemos incluir?', tipo: 'textarea', placeholder: 'Ex.: Data, local, referências...', obrigatorio: false }
+    ];
+  }
+
+  /* ─── CRIAR CV / ESCOLHER MODELO ─── */
+
+  window.iniciarCriarCV = function () {
+    Router.go('escolher-modelo');
+  };
+
+  Router.register('escolher-modelo', {
+    title: 'Escolher Modelo',
+    render: function () {
+      var modelos = ModelRegistry.list('cv');
+      var profile = Storage.getProfile();
+      var suggestion = AI && AI.suggestModel ? AI.suggestModel(profile.cargo) : null;
+      return '<div class="page">' +
+        '<h1>Escolher Modelo</h1>' +
+        '<p class="subtitle">Selecione um modelo para o seu currículo. Pode trocar depois.</p>' +
+        (suggestion ? '<div class="model-suggestion" onclick="criarCVComModelo(\'' + suggestion.model + '\')"><strong>💡 Sugestão:</strong> ' + esc(suggestion.reason) + '</div>' : '') +
+        '<div class="model-selector">' +
+          modelos.map(function (m) {
+            return '<div class="model-option" onclick="criarCVComModelo(\'' + m.id + '\')">' +
+              '<span class="model-dot"></span> ' + esc(m.name) +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    }
+  });
+
+  window.criarCVComModelo = function (modelId) {
+    var profile = Storage.getProfile();
+    var docId = Storage.createDoc('cv', 'CV ' + (profile.cargo || 'Profissional'), modelId);
+    // Save profile data as document data
+    Storage.saveDocData(docId, JSON.parse(JSON.stringify(profile)));
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  /* ─── CRIAR DOCUMENTO ─── */
+
+  window.iniciarCriarDoc = function () {
+    Router.go('selecionar-doc');
+  };
 
   Router.register('selecionar-doc', {
-    title: 'Criar Documento',
-    render() {
-      return `<div class="page">
-        <h1>Que documento queres criar?</h1>
-        <p class="subtitle">Escolhe o tipo de documento e preenche os dados. Nós formatamos com um modelo profissional.</p>
-        <div class="card-grid">${DocTypes.tipos.map(t => `<div class="card" onclick="iniciarDoc('${t.id}')" style="animation-delay:${0.1 + DocTypes.tipos.indexOf(t) * 0.05}s"><div class="card-icon" style="font-size:28px">${t.icon}</div><h3>${esc(t.name)}</h3><p>${esc(t.desc)}</p></div>`).join('')}</div>
-      </div>`;
+    title: 'Que Documento?',
+    render: function () {
+      return '<div class="page">' +
+        '<h1>Que documento deseja criar?</h1>' +
+        '<p class="subtitle">Escolha o tipo de documento.</p>' +
+        '<div class="card-grid">' +
+          DocTypes.tipos.map(function (t) {
+            return '<div class="card" onclick="criarDocTipo(\'' + t.id + '\')" style="animation-delay:' + (0.1 + DocTypes.tipos.indexOf(t) * 0.05) + 's">' +
+              '<div class="card-icon" style="font-size:28px">' + t.icon + '</div>' +
+              '<h3>' + esc(t.name) + '</h3>' +
+              '<p>' + esc(t.desc) + '</p>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
     }
   });
 
-  window.iniciarDoc = function (id) {
-    setDocType(id);
-    saveDoc({});
-    Router.go('preencher-doc');
+  window.criarDocTipo = function (tipoId) {
+    var info = DocTypes.get(tipoId);
+    var docId = Storage.createDoc('doc', info ? info.name : 'Documento');
+    Storage.updateDoc(docId, { docType: tipoId });
+    Storage.saveDocData(docId, {});
+    Router.go('editar-doc?id=' + docId + '&tipo=' + tipoId);
   };
 
-  /* ─── PREENCHER DOCUMENTO ─── */
+  /* ─── EDITAR DOCUMENTO ─── */
 
-  Router.register('preencher-doc', {
-    title: 'Preencher Documento',
-    render() {
-      const tipo = getDocType();
-      const info = DocTypes.get(tipo);
-      const fields = DocTypes.getFormFields(tipo);
-      const d = loadDoc();
-      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'selecionar-doc\')">Voltar</button></div>';
-      return `<div class="page">
-        <h1>${esc(info.name)}</h1>
-        <p class="subtitle">Preenche os campos abaixo. O documento será formatado automaticamente.</p>
-        <div class="form-section"><h2>Dados do Documento</h2>${fields.map(f => {
-          const val = esc(d[f.key] || '');
-          if (f.type === 'textarea') {
-            return `<div class="form-group"><label>${esc(f.label)}</label><div class="input-with-mic textarea-mic"><textarea name="doc-${f.key}" placeholder="${esc(f.placeholder||'')}" rows="5">${val}</textarea><button class="btn-mic" data-mic="doc-${f.key}" aria-label="Voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>`;
-          }
-          return `<div class="form-group"><label>${esc(f.label)}</label><input type="${f.type === 'date' ? 'date' : 'text'}" name="doc-${f.key}" value="${val}" placeholder="${esc(f.placeholder||'')}"></div>`;
-        }).join('')}</div>
-        <div class="form-actions"><button class="btn-primary" onclick="guardarEprevDoc()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button></div>
-      </div>`;
-    },
-    onLeave() { guardarDoc(); }
-  });
+  Router.register('editar-doc', {
+    title: 'Editar',
+    render: function () {
+      var params = Router.getParams();
+      var docId = params.id;
+      if (!docId) return '<div class="page"><p>Documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
 
-  /* ─── PRÉ-VISUALIZAR DOC ─── */
+      var docMeta = null;
+      Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+      if (!docMeta) return '<div class="page"><p>Documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
 
-  Router.register('pre-visualizar-doc', {
-    title: 'Pré-visualizar',
-    onRender: function () { scalePreview('preview-frame'); },
-    render() {
-      const tipo = getDocType();
-      const info = DocTypes.get(tipo);
-      const d = loadDoc();
-      const renderFn = DocTypes.getRenderFn(tipo);
-      if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'selecionar-doc\')">Voltar</button></div>';
-      return `<div class="page">
-        <h1>Pré-visualizar</h1>
-        <p class="subtitle">Vê como está a ficar o documento. Podes voltar atrás para ajustar.</p>
-        <div class="preview-container"><div id="preview-frame">${renderFn ? renderFn(d) : '<div class="loading-model"><div class="spinner"></div><p>A preparar documento...</p></div>'}</div></div>
-        <div class="export-bar">
-          <button class="btn-primary btn-exportar-pdf" onclick="exportarDocPDF()" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>
-          <button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp('documento')" aria-label="Partilhar"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
-        </div>
-        <button class="btn-secondary" onclick="navegar('preencher-doc')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>
-      </div>`;
-    }
-  });
+      var tipo = params.tipo || docMeta.docType || '';
+      var isCV = docMeta.type === 'cv';
+      var data = Storage.getDocData(docId) || {};
 
-  /* ─── RENDERERS DE FORMULÁRIO ─── */
+      if (isCV) {
+        // Render CV editor (prefilled with profile data)
+        var fotoPreview = data.foto && data.foto.startsWith('data:')
+          ? '<img src="' + esc(data.foto) + '" alt="" class="photo-preview">'
+          : (data.foto ? '<img src="' + esc(data.foto) + '" alt="" class="photo-preview" onerror="this.parentElement.innerHTML=\'<span class=\\\'photo-preview-placeholder\\\'>📷</span>\'">' : '');
 
-  function renderExp(e, i) {
-    return `<div class="exp-item"><div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" name="exp-cargo-${i}" value="${esc(e.cargo)}" placeholder="Ex.: Analista"></div><div class="form-group"><label>Empresa</label><input type="text" name="exp-empresa-${i}" value="${esc(e.empresa)}" placeholder="Ex.: Empresa XYZ"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" name="exp-inicio-${i}" value="${esc(e.inicio)}" placeholder="Ex.: 2020"></div><div class="form-group"><label>Fim</label><input type="text" name="exp-fim-${i}" value="${esc(e.fim)}" placeholder="Ex.: Presente"></div></div><div class="form-group"><label>Descrição</label><div class="input-with-mic textarea-mic"><textarea name="exp-descricao-${i}" placeholder="Descreve as tuas responsabilidades...">${esc(e.descricao)}</textarea><button class="btn-mic" data-mic="exp-descricao-${i}" aria-label="Voz"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div><div class="ai-actions"><button class="btn-ai" onclick="melhorarDescricao(${i},'profissional')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar</button><button class="btn-ai btn-ai-secondary" onclick="melhorarDescricao(${i},'conciso')">Conciso</button></div></div><button class="btn-remove" onclick="removerExp(${i})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>`;
-  }
+        var modelos = ModelRegistry.list('cv');
+        var atual = docMeta.model || 'classico';
 
-  function renderForm(f, i) {
-    return `<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" name="form-curso-${i}" value="${esc(f.curso)}" placeholder="Ex.: Licenciatura"></div><div class="form-group"><label>Instituição</label><input type="text" name="form-instituicao-${i}" value="${esc(f.instituicao)}" placeholder="Ex.: Universidade"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" name="form-inicio-${i}" value="${esc(f.inicio)}" placeholder="Ex.: 2015"></div><div class="form-group"><label>Fim</label><input type="text" name="form-fim-${i}" value="${esc(f.fim)}" placeholder="Ex.: 2021"></div></div><button class="btn-remove" onclick="removerForm(${i})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>`;
-  }
+        return '<div class="page page-wide">' +
+          '<div class="split-layout">' +
+            '<div class="split-form">' +
+              '<div class="page-header-row">' +
+                '<h1>' + esc(docMeta.name) + '</h1>' +
+                '<div class="model-selector-inline">' +
+                  modelos.map(function (m) {
+                    return '<span class="model-chip ' + (m.id === atual ? 'selected' : '') + '" onclick="trocarModeloDoc(\'' + docId + '\',\'' + m.id + '\')">' + esc(m.name) + '</span>';
+                  }).join('') +
+                '</div>' +
+              '</div>' +
 
-  function renderSkill(s, i) {
-    const niveis = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'];
-    return `<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" name="skill-nome-${i}" value="${esc(s.nome)}" placeholder="Ex.: Liderança"></div><div class="form-group" style="width:110px;margin-bottom:0"><label>Nível</label><select name="skill-nivel-${i}">${niveis.map((n, ni) => `<option value="${ni}" ${(s.nivel==ni)?'selected':''}>${n}</option>`).join('')}</select></div><button class="btn-icon-sm" onclick="removerSkill(${i})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`;
-  }
+              // Personal Data section
+              '<div class="form-section"><h2>Dados Pessoais</h2>' +
+                '<div class="form-group"><label>Nome completo</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="nome" value="' + esc(data.nome || '') + '" placeholder="Ex.: Adelino Graça"></div>' +
+                '<div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="cargo" value="' + esc(data.cargo || '') + '" placeholder="Ex.: Diretor"></div><div class="form-group"><label>Links</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="social" value="' + esc(data.social || '') + '" placeholder="linkedin.com/..."></div></div>' +
+                '<div class="form-group"><label>Foto</label><div class="photo-upload"><div class="photo-preview-wrap" id="edit-photo-preview-wrap">' + (fotoPreview || '<span class="photo-preview-placeholder">📷</span>') + '</div><div class="photo-upload-fields"><button class="btn-secondary btn-small" onclick="document.getElementById(\'edit-file-foto\').click()">Escolher</button><input type="file" id="edit-file-foto" accept="image/*" style="display:none"><input type="url" id="edit-input-foto" class="cv-field" data-doc="' + docId + '" data-key="foto" value="' + esc(data.foto && !data.foto.startsWith('data:') ? data.foto : '') + '" placeholder="URL da foto..." style="margin-top:6px;font-size:13px"></div></div></div>' +
+                '<div class="form-group"><label>Resumo</label><textarea class="cv-field" data-doc="' + docId + '" data-key="resumo" placeholder="Resumo profissional..." rows="3">' + esc(data.resumo || '') + '</textarea></div>' +
+                '<div class="form-row"><div class="form-group"><label>Email</label><input type="email" class="cv-field" data-doc="' + docId + '" data-key="email" value="' + esc(data.email || '') + '" placeholder="email@exemplo.com"></div><div class="form-group"><label>Telefone</label><input type="tel" class="cv-field" data-doc="' + docId + '" data-key="telefone" value="' + esc(data.telefone || '') + '" placeholder="+244 900 000 000"></div></div>' +
+                '<div class="form-group"><label>Morada</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="morada" value="' + esc(data.morada || '') + '" placeholder="Ex.: Luanda"></div>' +
+              '</div>' +
 
-  function renderIdioma(l, i) {
-    const niveis = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
-    return `<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" name="idioma-nome-${i}" value="${esc(l.idioma)}" placeholder="Ex.: Inglês"></div><div class="form-group" style="width:130px;margin-bottom:0"><label>Nível</label><select name="idioma-nivel-${i}">${niveis.map(n => `<option value="${n}" ${l.nivel===n?'selected':''}>${n}</option>`).join('')}</select></div><button class="btn-icon-sm" onclick="removerIdioma(${i})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`;
-  }
+              // Experience
+              '<div class="form-section"><h2>Experiência</h2><div id="edit-exp-container">' +
+                (data.experiencias || [{cargo:'',empresa:'',inicio:'',fim:'',descricao:''}]).map(function (e, i) {
+                  return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="cargo" value="' + esc(e.cargo) + '"></div><div class="form-group"><label>Empresa</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="empresa" value="' + esc(e.empresa) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="inicio" value="' + esc(e.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="fim" value="' + esc(e.fim) + '"></div></div><div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="descricao" rows="2">' + esc(e.descricao) + '</textarea><div class="ai-actions"><button class="btn-ai" onclick="melhorarExpCampo(\'' + docId + '\',' + i + ',\'profissional\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar</button><button class="btn-ai btn-ai-secondary" onclick="melhorarExpCampo(\'' + docId + '\',' + i + ',\'conciso\')">Conciso</button></div></div><button class="btn-remove" onclick="removerExpEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+                }).join('') + '</div>' +
+                '<button class="btn-secondary add-btn" onclick="adicionarExpEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
+              '</div>' +
 
-  /* ─── ACÇÕES CV ─── */
+              // Education
+              '<div class="form-section"><h2>Formação</h2><div id="edit-formacao-container">' +
+                (data.formacoes || [{curso:'',instituicao:'',inicio:'',fim:''}]).map(function (f, i) {
+                  return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="curso" value="' + esc(f.curso) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="instituicao" value="' + esc(f.instituicao) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="inicio" value="' + esc(f.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="fim" value="' + esc(f.fim) + '"></div></div><button class="btn-remove" onclick="removerFormEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+                }).join('') + '</div>' +
+                '<button class="btn-secondary add-btn" onclick="adicionarFormEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
+              '</div>' +
 
-  window.guardarCV = function () {
-    const d = {};
-    d.nome = document.getElementById('input-nome')?.value || '';
-    d.cargo = document.getElementById('input-cargo')?.value || '';
-    d.social = document.getElementById('input-social')?.value || '';
-    const fotoUrl = document.getElementById('input-foto')?.value || '';
-    d.foto = window._fotoDataUrl || fotoUrl;
-    d.resumo = document.getElementById('input-resumo')?.value || '';
-    d.email = document.getElementById('input-email')?.value || '';
-    d.telefone = document.getElementById('input-telefone')?.value || '';
-    d.morada = document.getElementById('input-morada')?.value || '';
-    d.experiencias = []; document.querySelectorAll('[name^="exp-cargo-"]').forEach((el,i) => { d.experiencias.push({cargo:el.value, empresa:document.querySelector(`[name="exp-empresa-${i}"]`)?.value||'', inicio:document.querySelector(`[name="exp-inicio-${i}"]`)?.value||'', fim:document.querySelector(`[name="exp-fim-${i}"]`)?.value||'', descricao:document.querySelector(`[name="exp-descricao-${i}"]`)?.value||''}); });
-    d.formacoes = []; document.querySelectorAll('[name^="form-curso-"]').forEach((el,i) => { d.formacoes.push({curso:el.value, instituicao:document.querySelector(`[name="form-instituicao-${i}"]`)?.value||'', inicio:document.querySelector(`[name="form-inicio-${i}"]`)?.value||'', fim:document.querySelector(`[name="form-fim-${i}"]`)?.value||''}); });
-    d.competencias = []; document.querySelectorAll('[name^="skill-nome-"]').forEach((el,i) => { d.competencias.push({nome:el.value, nivel:document.querySelector(`[name="skill-nivel-${i}"]`)?.value||'3'}); });
-    d.idiomas = []; document.querySelectorAll('[name^="idioma-nome-"]').forEach((el,i) => { d.idiomas.push({idioma:el.value, nivel:document.querySelector(`[name="idioma-nivel-${i}"]`)?.value||'Iniciante'}); });
-    d.modelo = loadCV().modelo || 'classico';
-    saveCV(d);
-    return d;
-  };
+              // Skills
+              '<div class="form-section"><h2>Competências</h2><div id="edit-skills-container">' +
+                (data.competencias || [{nome:'',nivel:'3'}]).map(function (s, i) {
+                  var nvs = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'];
+                  return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="competencias" data-index="' + i + '" data-key="nome" value="' + esc(s.nome) + '"></div><div class="form-group" style="width:110px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + docId + '" data-array="competencias" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n, ni) { return '<option value="' + ni + '" ' + ((s.nivel == ni) ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerSkillEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+                }).join('') + '</div>' +
+                '<button class="btn-secondary add-btn" onclick="adicionarSkillEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
+              '</div>' +
 
-  window.adicionarExp = function () { const d = guardarCV(); d.experiencias = d.experiencias||[]; d.experiencias.push({}); saveCV(d); Router.go('criar-curriculo'); };
-  window.adicionarForm = function () { const d = guardarCV(); d.formacoes = d.formacoes||[]; d.formacoes.push({}); saveCV(d); Router.go('criar-curriculo'); };
-  window.adicionarSkill = function () { const d = guardarCV(); d.competencias = d.competencias||[]; d.competencias.push({nome:'',nivel:'3'}); saveCV(d); Router.go('criar-curriculo'); };
-  window.adicionarIdioma = function () { const d = guardarCV(); d.idiomas = d.idiomas||[]; d.idiomas.push({idioma:'',nivel:'Iniciante'}); saveCV(d); Router.go('criar-curriculo'); };
-  window.removerExp = function (i) { const d = guardarCV(); d.experiencias.splice(i,1); if(!d.experiencias.length) d.experiencias.push({}); saveCV(d); Router.go('criar-curriculo'); };
-  window.removerForm = function (i) { const d = guardarCV(); d.formacoes.splice(i,1); if(!d.formacoes.length) d.formacoes.push({}); saveCV(d); Router.go('criar-curriculo'); };
-  window.removerSkill = function (i) { const d = guardarCV(); d.competencias.splice(i,1); if(!d.competencias.length) d.competencias.push({nome:'',nivel:'3'}); saveCV(d); Router.go('criar-curriculo'); };
-  window.removerIdioma = function (i) { const d = guardarCV(); d.idiomas.splice(i,1); if(!d.idiomas.length) d.idiomas.push({idioma:'',nivel:'Iniciante'}); saveCV(d); Router.go('criar-curriculo'); };
-  window.guardarEprevCV = function () { guardarCV(); Router.go('pre-visualizar-cv'); };
+              // Languages
+              '<div class="form-section"><h2>Idiomas</h2><div id="edit-idiomas-container">' +
+                (data.idiomas || [{idioma:'',nivel:'Iniciante'}]).map(function (l, i) {
+                  var nvs = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
+                  return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="idiomas" data-index="' + i + '" data-key="idioma" value="' + esc(l.idioma) + '"></div><div class="form-group" style="width:130px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + docId + '" data-array="idiomas" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n) { return '<option value="' + n + '" ' + (l.nivel === n ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerIdiomaEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+                }).join('') + '</div>' +
+                '<button class="btn-secondary add-btn" onclick="adicionarIdiomaEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
+              '</div>' +
 
-  window.selecionarModelo = function (id) {
-    const d = loadCV();
-    d.modelo = id;
-    saveCV(d);
-    Router.go('pre-visualizar-cv');
-  };
+              '<div class="form-actions">' +
+                '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="split-preview" id="split-preview-area">' +
+              '<div class="preview-header"><span>Pré-visualização</span><button class="btn-primary btn-small" onclick="salvarEVerPreview(\'' + docId + '\')">Ver completo</button></div>' +
+              '<div class="preview-container"><div id="edit-preview-frame">' +
+                '<div class="loading-model"><div class="spinner"></div><p>A carregar pré-visualização...</p></div>' +
+              '</div></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      } else {
+        // Doc form
+        var info = DocTypes.get(tipo);
+        var fields = DocTypes.getFormFields(tipo);
+        if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
 
-  window.melhorarDescricao = async function (i, style) {
-    const guardar = guardarCV();
-    const exp = guardar.experiencias[i];
-    if (!exp || !exp.descricao || exp.descricao.trim().length < 3) {
-      alert('Escreve primeiro uma descrição da tua experiência.');
-      return;
-    }
-    const btn = document.querySelector(`[onclick="melhorarDescricao(${i},'${style}')"]`);
-    if (btn) { btn.disabled = true; btn.textContent = 'A melhorar...'; }
-    try {
-      const melhorado = await AI.enhanceText(exp.descricao, style);
-      const textarea = document.querySelector(`[name="exp-descricao-${i}"]`);
-      if (textarea) {
-        textarea.value = melhorado;
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        return '<div class="page page-wide">' +
+          '<div class="split-layout">' +
+            '<div class="split-form">' +
+              '<h1>' + esc(info.name) + '</h1>' +
+              '<div class="form-section">' +
+                fields.map(function (f) {
+                  var val = esc(data[f.key] || '');
+                  if (f.type === 'textarea') {
+                    return '<div class="form-group"><label>' + esc(f.label) + '</label><textarea class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" placeholder="' + esc(f.placeholder || '') + '" rows="5">' + val + '</textarea></div>';
+                  }
+                  return '<div class="form-group"><label>' + esc(f.label) + '</label><input type="' + (f.type === 'date' ? 'date' : 'text') + '" class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" value="' + val + '" placeholder="' + esc(f.placeholder || '') + '"></div>';
+                }).join('') +
+              '</div>' +
+              '<div class="form-actions">' +
+                '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="split-preview" id="split-preview-area">' +
+              '<div class="preview-header"><span>Pré-visualização</span><button class="btn-primary btn-small" onclick="salvarEVerPreview(\'' + docId + '\')">Ver completo</button></div>' +
+              '<div class="preview-container"><div id="edit-preview-frame">' +
+                '<div class="loading-model"><div class="spinner"></div><p>A carregar pré-visualização...</p></div>' +
+              '</div></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
       }
-    } catch (err) {
-      alert(err.message || 'Erro ao melhorar descrição');
+    },
+    onRender: function () {
+      var params = Router.getParams();
+      if (params.id) {
+        setupAutoSaveDoc(params.id);
+        // Try to render preview for CV
+        var docMeta = null;
+        Storage.listDocs().forEach(function (d) { if (d.id === params.id) docMeta = d; });
+        if (docMeta && docMeta.type === 'cv') {
+          atualizarPreviewDoc(params.id);
+        } else if (docMeta && docMeta.type === 'doc') {
+          atualizarPreviewDoc(params.id);
+        }
+      }
     }
-    if (btn) { btn.disabled = false; btn.textContent = style === 'conciso' ? 'Conciso' : 'Melhorar'; }
-  };
+  });
 
-  /* ─── ACÇÕES DOC ─── */
-
-  window.guardarDoc = function () {
-    const d = {};
-    document.querySelectorAll('[name^="doc-"]').forEach(el => {
-      d[el.name.replace('doc-', '')] = el.value;
+  function setupAutoSaveDoc(docId) {
+    var els = document.querySelectorAll('#app-content [data-doc="' + docId + '"]');
+    els.forEach(function (el) {
+      el.removeEventListener('input', function () { autosaveDoc(docId); });
+      el.addEventListener('input', function () { autosaveDoc(docId); });
+      el.removeEventListener('change', function () { autosaveDoc(docId); });
+      el.addEventListener('change', function () { autosaveDoc(docId); });
     });
-    saveDoc(d);
-    return d;
+  }
+
+  function recolherDadosDoc(docId) {
+    var isCV = false;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId && d.type === 'cv') isCV = true; });
+    var data = {};
+
+    if (isCV) {
+      // Collect simple fields
+      document.querySelectorAll('.cv-field[data-doc="' + docId + '"]').forEach(function (el) {
+        data[el.getAttribute('data-key')] = el.value;
+      });
+      // Override foto if file upload new one
+      var fotoUrl = document.getElementById('edit-input-foto');
+      if (fotoUrl) data.foto = window._editFotoDataUrl || fotoUrl.value;
+      // Collect arrays
+      ['experiencias', 'formacoes', 'competencias', 'idiomas'].forEach(function (arrName) {
+        var items = [];
+        var indices = {};
+        document.querySelectorAll('.cv-array-field[data-doc="' + docId + '"][data-array="' + arrName + '"]').forEach(function (el) {
+          var idx = parseInt(el.getAttribute('data-index'));
+          var key = el.getAttribute('data-key');
+          if (!indices[idx]) indices[idx] = {};
+          indices[idx][key] = el.value;
+        });
+        Object.keys(indices).sort().forEach(function (k) { items.push(indices[k]); });
+        data[arrName] = items;
+      });
+    } else {
+      document.querySelectorAll('.doc-field[data-doc="' + docId + '"]').forEach(function (el) {
+        data[el.getAttribute('data-key')] = el.value;
+      });
+    }
+    return data;
+  }
+
+  function autosaveDoc(docId) {
+    mostrarSaveStatus('Guardando...');
+    var data = recolherDadosDoc(docId);
+    Storage.saveDocData(docId, data);
+    Storage.updateDoc(docId, {});
+    setTimeout(function () { mostrarSaveStatus('✓ Guardado'); }, 400);
+    // Debounced preview update
+    if (window._previewTimer) clearTimeout(window._previewTimer);
+    window._previewTimer = setTimeout(function () { atualizarPreviewDoc(docId); }, 800);
+  }
+
+  function atualizarPreviewDoc(docId) {
+    var frame = document.getElementById('edit-preview-frame');
+    if (!frame) return;
+    var docMeta = null;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+    if (!docMeta) return;
+    var data = Storage.getDocData(docId) || {};
+
+    if (docMeta.type === 'cv') {
+      data.modelo = docMeta.model || 'classico';
+      var model = ModelRegistry.get('cv', data.modelo) || ModelRegistry.list('cv')[0];
+      frame.innerHTML = model ? model.render(data) : '<p>Modelo não encontrado</p>';
+      scalePreview('edit-preview-frame');
+    } else if (docMeta.type === 'doc') {
+      // Find the tipo - we need to get it from the docMeta or params
+      var tipo = docMeta.docType || '';
+      // Try to find a renderer
+      var renderFn = DocTypes.getRenderFn(tipo);
+      if (renderFn) {
+        frame.innerHTML = renderFn(data);
+        scalePreview('edit-preview-frame');
+      } else {
+        frame.innerHTML = '<p>Pré-visualização disponível na página de exportação.</p>';
+      }
+    }
+  }
+
+  window.salvarEVerPreview = function (docId) {
+    autosaveDoc(docId);
+    Router.go('preview-doc?id=' + docId);
   };
 
-  window.guardarEprevDoc = function () {
-    guardarDoc();
-    Router.go('pre-visualizar-doc');
+  /* ─── PREVIEW DOC ─── */
+
+  Router.register('preview-doc', {
+    title: 'Pré-visualizar',
+    onRender: function () {
+      scalePreview('preview-frame');
+    },
+    render: function () {
+      var params = Router.getParams();
+      var docId = params.id;
+      if (!docId) return '<div class="page"><p>Documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
+
+      var docMeta = null;
+      Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+      if (!docMeta) return '<div class="page"><p>Documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
+
+      var data = Storage.getDocData(docId) || {};
+      var isCV = docMeta.type === 'cv';
+
+      if (isCV) {
+        data.modelo = docMeta.model || 'classico';
+        var model = ModelRegistry.get('cv', data.modelo) || ModelRegistry.list('cv')[0];
+        var modelos = ModelRegistry.list('cv');
+        var suggestion = AI && AI.suggestModel ? AI.suggestModel(data.cargo) : null;
+
+        return '<div class="page">' +
+          '<h1>' + esc(docMeta.name) + '</h1>' +
+          (suggestion && suggestion.model !== docMeta.model ? '<div class="model-suggestion" onclick="trocarModeloPreview(\'' + docId + '\',\'' + suggestion.model + '\')"><strong>💡 Sugestão:</strong> ' + esc(suggestion.reason) + ' <span class="model-suggestion-link">Experimentar ' + suggestion.model + '</span></div>' : '') +
+          '<div class="model-selector">' +
+            modelos.map(function (m) {
+              return '<div class="model-option ' + (m.id === docMeta.model ? 'selected' : '') + '" onclick="trocarModeloPreview(\'' + docId + '\',\'' + m.id + '\')"><span class="model-dot"></span> ' + esc(m.name) + '</div>';
+            }).join('') +
+          '</div>' +
+          '<div class="preview-container"><div id="preview-frame">' + (model ? model.render(data) : '<div class="loading-model"><div class="spinner"></div></div>') + '</div></div>' +
+          '<div class="export-bar">' +
+            '<button class="btn-primary btn-exportar-pdf" onclick="exportarDocPDFPreview(\'' + docId + '\')" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>' +
+            '<button class="btn-secondary" style="width:auto;padding:14px" onclick="partilharWhatsApp(\'' + docId + '\')" aria-label="Partilhar"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>' +
+          '</div>' +
+          '<button class="btn-secondary" onclick="navegar(\'editar-doc?id=' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>' +
+        '</div>';
+      } else {
+        // Doc preview
+        var tipoDoc = docMeta.docType || '';
+        var renderFn = DocTypes.getRenderFn(tipoDoc);
+        return '<div class="page">' +
+          '<h1>' + esc(docMeta.name) + '</h1>' +
+          '<div class="preview-container"><div id="preview-frame">' + (renderFn ? renderFn(data) : '<p>Pré-visualização indisponível</p>') + '</div></div>' +
+          '<div class="export-bar">' +
+            '<button class="btn-primary btn-exportar-pdf" onclick="exportarDocPDFPreview(\'' + docId + '\')" style="flex:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Exportar PDF</button>' +
+          '</div>' +
+          '<button class="btn-secondary" onclick="navegar(\'editar-doc?id=' + docId + '&tipo=' + tipoDoc + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Voltar e editar</button>' +
+        '</div>';
+      }
+    }
+  });
+
+  /* ─── AÇÕES DE DOCUMENTOS ─── */
+
+  window.abrirDoc = function (docId) {
+    var docMeta = null;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+    if (!docMeta) return;
+    if (docMeta.type === 'cv') {
+      Router.go('editar-doc?id=' + docId);
+    } else {
+      // Need the docType - check if we stored it
+      var data = Storage.getDocData(docId);
+      var tipo = docMeta.docType || '';
+      // If we don't know the tipo, try to find it from the data
+      Router.go('editar-doc?id=' + docId + '&tipo=' + tipo);
+    }
   };
 
-  window.exportarDocPDF = function () {
-    const tipo = getDocType();
-    const info = DocTypes.get(tipo);
-    const nome = info ? info.name : 'documento';
+  window.duplicarDoc = function (docId) {
+    var newId = Storage.duplicateDoc(docId);
+    if (newId) {
+      Router.go('editar-doc?id=' + newId);
+    }
+  };
+
+  window.confirmarEliminarDoc = function (docId) {
+    if (confirm('Tem a certeza que deseja eliminar este documento?')) {
+      Storage.deleteDoc(docId);
+      // If we're on documentos page, reload it
+      if (Router.current === 'documentos') {
+        Router.go('documentos');
+      } else if (Router.current === 'home') {
+        Router.go('home');
+      } else {
+        Router.go('documentos');
+      }
+    }
+  };
+
+  window.exportarDocPDFPreview = function (docId) {
+    var docMeta = null;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+    var nome = docMeta ? docMeta.name : 'documento';
     PDFExport.exportPreview('preview-frame', nome.toLowerCase().replace(/\s+/g, '-') + '.pdf');
   };
 
-  window.partilharWhatsApp = function (tipo) {
-    const texto = encodeURIComponent(
-      'Criei o meu ' + (tipo === 'curriculo' ? 'currículo' : 'documento') +
-      ' com a Chave! 🚀\n\nModelos premium, rápido e sem complicação.\n\n' +
+  window.partilharWhatsApp = function (docId) {
+    var docMeta = null;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+    var nome = docMeta ? docMeta.name : 'documento';
+    var texto = encodeURIComponent(
+      'Criei o meu ' + nome + ' com o Tá Feito! 🚀\n\nModelos premium, rápido e sem complicação.\n\n' +
       '👉 ' + window.location.href
     );
     window.open('https://wa.me/?text=' + texto, '_blank');
   };
 
-  window.partilharLink = function () {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Chave — Currículos & Documentos',
-        text: 'Cria documentos profissionais com modelos premium. Rápido, simples e gratuito.',
-        url: window.location.href
-      }).catch(function () {});
-    } else {
-      navigator.clipboard.writeText(window.location.href).then(function () {
-        alert('Link copiado! Cola no WhatsApp ou onde quiseres.');
-      }).catch(function () {
-        window.partilharWhatsApp('link');
+  window.trocarModeloDoc = function (docId, modelId) {
+    Storage.updateDoc(docId, { model: modelId });
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.trocarModeloPreview = function (docId, modelId) {
+    Storage.updateDoc(docId, { model: modelId });
+    Router.go('preview-doc?id=' + docId);
+  };
+
+  /* ─── AÇÕES DE PERFIL ─── */
+
+  function guardarPerfil() {
+    var p = {
+      nome: document.getElementById('perfil-nome')?.value || '',
+      cargo: document.getElementById('perfil-cargo')?.value || '',
+      email: document.getElementById('perfil-email')?.value || '',
+      telefone: document.getElementById('perfil-telefone')?.value || '',
+      morada: document.getElementById('perfil-morada')?.value || '',
+      social: document.getElementById('perfil-social')?.value || '',
+      foto: window._perfilFotoDataUrl || document.getElementById('perfil-input-foto')?.value || '',
+      resumo: document.getElementById('perfil-resumo')?.value || '',
+      experiencias: [],
+      formacoes: [],
+      competencias: [],
+      idiomas: [],
+      certificacoes: []
+    };
+
+    document.querySelectorAll('[name^="perfil-exp-cargo-"]').forEach(function (el, i) {
+      p.experiencias.push({
+        cargo: el.value,
+        empresa: document.querySelector('[name="perfil-exp-empresa-' + i + '"]')?.value || '',
+        inicio: document.querySelector('[name="perfil-exp-inicio-' + i + '"]')?.value || '',
+        fim: document.querySelector('[name="perfil-exp-fim-' + i + '"]')?.value || '',
+        descricao: document.querySelector('[name="perfil-exp-descricao-' + i + '"]')?.value || ''
       });
+    });
+
+    document.querySelectorAll('[name^="perfil-form-curso-"]').forEach(function (el, i) {
+      p.formacoes.push({
+        curso: el.value,
+        instituicao: document.querySelector('[name="perfil-form-instituicao-' + i + '"]')?.value || '',
+        inicio: document.querySelector('[name="perfil-form-inicio-' + i + '"]')?.value || '',
+        fim: document.querySelector('[name="perfil-form-fim-' + i + '"]')?.value || ''
+      });
+    });
+
+    document.querySelectorAll('[name^="perfil-skill-nome-"]').forEach(function (el, i) {
+      p.competencias.push({
+        nome: el.value,
+        nivel: document.querySelector('[name="perfil-skill-nivel-' + i + '"]')?.value || '3'
+      });
+    });
+
+    document.querySelectorAll('[name^="perfil-idioma-nome-"]').forEach(function (el, i) {
+      p.idiomas.push({
+        idioma: el.value,
+        nivel: document.querySelector('[name="perfil-idioma-nivel-' + i + '"]')?.value || 'Iniciante'
+      });
+    });
+
+    document.querySelectorAll('[name^="perfil-cert-nome-"]').forEach(function (el, i) {
+      p.certificacoes.push({
+        nome: el.value,
+        instituicao: document.querySelector('[name="perfil-cert-instituicao-' + i + '"]')?.value || '',
+        data: document.querySelector('[name="perfil-cert-data-' + i + '"]')?.value || ''
+      });
+    });
+
+    Storage.saveProfile(p);
+    mostrarSaveStatus('✓ Perfil guardado');
+    setTimeout(function () { Router.go('home'); }, 600);
+  }
+
+  window.guardarPerfil = guardarPerfil;
+
+  window.adicionarExpPerfil = function () {
+    var p = Storage.getProfile();
+    p.experiencias = p.experiencias || [];
+    p.experiencias.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.removerExpPerfil = function (i) {
+    var p = Storage.getProfile();
+    p.experiencias.splice(i, 1);
+    if (!p.experiencias.length) p.experiencias.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.adicionarFormPerfil = function () {
+    var p = Storage.getProfile();
+    p.formacoes = p.formacoes || [];
+    p.formacoes.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.removerFormPerfil = function (i) {
+    var p = Storage.getProfile();
+    p.formacoes.splice(i, 1);
+    if (!p.formacoes.length) p.formacoes.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.adicionarSkillPerfil = function () {
+    var p = Storage.getProfile();
+    p.competencias = p.competencias || [];
+    p.competencias.push({ nome: '', nivel: '3' });
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.removerSkillPerfil = function (i) {
+    var p = Storage.getProfile();
+    p.competencias.splice(i, 1);
+    if (!p.competencias.length) p.competencias.push({ nome: '', nivel: '3' });
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.adicionarIdiomaPerfil = function () {
+    var p = Storage.getProfile();
+    p.idiomas = p.idiomas || [];
+    p.idiomas.push({ idioma: '', nivel: 'Iniciante' });
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.removerIdiomaPerfil = function (i) {
+    var p = Storage.getProfile();
+    p.idiomas.splice(i, 1);
+    if (!p.idiomas.length) p.idiomas.push({ idioma: '', nivel: 'Iniciante' });
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.adicionarCertPerfil = function () {
+    var p = Storage.getProfile();
+    p.certificacoes = p.certificacoes || [];
+    p.certificacoes.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  window.removerCertPerfil = function (i) {
+    var p = Storage.getProfile();
+    p.certificacoes.splice(i, 1);
+    if (!p.certificacoes.length) p.certificacoes.push({});
+    Storage.saveProfile(p);
+    Router.go('perfil');
+  };
+
+  /* ─── AÇÕES DE EDIÇÃO CV ─── */
+
+  window.adicionarExpEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.experiencias = data.experiencias || [];
+    data.experiencias.push({});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerExpEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.experiencias.splice(i, 1);
+    if (!data.experiencias.length) data.experiencias.push({});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarFormEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.formacoes = data.formacoes || [];
+    data.formacoes.push({});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerFormEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.formacoes.splice(i, 1);
+    if (!data.formacoes.length) data.formacoes.push({});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarSkillEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.competencias = data.competencias || [];
+    data.competencias.push({ nome: '', nivel: '3' });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerSkillEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.competencias.splice(i, 1);
+    if (!data.competencias.length) data.competencias.push({ nome: '', nivel: '3' });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarIdiomaEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.idiomas = data.idiomas || [];
+    data.idiomas.push({ idioma: '', nivel: 'Iniciante' });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerIdiomaEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.idiomas.splice(i, 1);
+    if (!data.idiomas.length) data.idiomas.push({ idioma: '', nivel: 'Iniciante' });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.melhorarExpCampo = async function (docId, i, style) {
+    var data = Storage.getDocData(docId) || {};
+    var exp = (data.experiencias || [])[i];
+    if (!exp || !exp.descricao || exp.descricao.trim().length < 3) {
+      alert('Escreva primeiro uma descrição.');
+      return;
+    }
+    try {
+      var melhorado = await AI.enhanceText(exp.descricao, style);
+      exp.descricao = melhorado;
+      Storage.saveDocData(docId, data);
+      Router.go('editar-doc?id=' + docId);
+    } catch (err) {
+      alert(err.message || 'Erro ao melhorar');
     }
   };
 
-  /* ─── FOTO UPLOAD ─── */
+  /* ─── FOTO UPLOAD GERAL ─── */
 
   document.addEventListener('change', function (e) {
-    if (e.target.id !== 'file-foto') return;
-    const file = e.target.files[0];
+    var target = e.target;
+    var prefix = '';
+    var wrapId = '';
+
+    if (target.id === 'file-foto') { prefix = ''; wrapId = 'photo-preview-wrap'; }
+    else if (target.id === 'perfil-file-foto') { prefix = 'perfil-'; wrapId = 'perfil-photo-preview-wrap'; }
+    else if (target.id === 'edit-file-foto') { prefix = 'edit-'; wrapId = 'edit-photo-preview-wrap'; }
+    else return;
+
+    var file = target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Escolhe uma com menos de 2MB.'); return; }
-    const reader = new FileReader();
+    if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Escolha uma com menos de 2MB.'); return; }
+    var reader = new FileReader();
     reader.onload = function (ev) {
-      const img = new Image();
+      var img = new Image();
       img.onload = function () {
-        let w = img.width, h = img.height;
-        if (w > 400 || h > 400) { const r = Math.min(400/w, 400/h); w = Math.round(w*r); h = Math.round(h*r); }
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        var w = img.width, h = img.height;
+        if (w > 400 || h > 400) { var r = Math.min(400 / w, 400 / h); w = Math.round(w * r); h = Math.round(h * r); }
+        var c = document.createElement('canvas'); c.width = w; c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
-        window._fotoDataUrl = c.toDataURL('image/jpeg', 0.85);
-        const wrap = document.getElementById('photo-preview-wrap');
-        if (wrap) wrap.innerHTML = `<img src="${esc(window._fotoDataUrl)}" alt="" class="photo-preview">`;
+        var dataUrl = c.toDataURL('image/jpeg', 0.85);
+        window['_' + prefix + 'fotoDataUrl'] = dataUrl;
+        var wrap = document.getElementById(wrapId);
+        if (wrap) wrap.innerHTML = '<img src="' + esc(dataUrl) + '" alt="" class="photo-preview">';
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
 
-  /* ─── VOZ ─── */
+  /* ─── PLANOS ─── */
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SpeechRecognition) {
-    let currentRec = null;
-    document.addEventListener('click', function (e) {
-      const btn = e.target.closest('.btn-mic');
-      if (!btn) return;
-      e.preventDefault();
-      const targetId = btn.getAttribute('data-mic');
-      const target = document.getElementById(targetId) || document.querySelector(`[name="${targetId}"]`);
-      if (!target) return;
-      if (currentRec) { currentRec.abort(); currentRec = null; document.querySelectorAll('.btn-mic').forEach(b => b.classList.remove('recording')); return; }
-      const rec = new SpeechRecognition();
-      rec.lang = 'pt-PT'; rec.continuous = false; rec.interimResults = true;
-      currentRec = rec; btn.classList.add('recording');
-      rec.onresult = function (ev) {
-        const t = ev.results[ev.results.length-1][0].transcript;
-        if (ev.results[ev.results.length-1].isFinal) {
-          const start = target.selectionStart || target.value.length;
-          target.value = target.value.slice(0, start) + t + target.value.slice(target.selectionEnd || start);
-          target.setSelectionRange(start + t.length, start + t.length);
-          target.dispatchEvent(new Event('input', { bubbles: true }));
-          btn.classList.remove('recording'); currentRec = null;
-        }
-      };
-      rec.onerror = rec.onend = function () { btn.classList.remove('recording'); currentRec = null; };
-      rec.start();
-    });
-  } else {
-    document.querySelectorAll('.btn-mic').forEach(b => { b.style.opacity = '0.3'; b.title = 'Voz não disponível'; });
-  }
+  Router.register('planos', {
+    title: 'Planos',
+    render: function () {
+      var plans = CONFIG.plans;
+      var banks = CONFIG.banks;
+      var currentPlan = localStorage.getItem('tf_plan') || 'free';
+
+      var planCards = Object.keys(plans).map(function (key) {
+        var p = plans[key];
+        var isCurrent = currentPlan === key;
+        var isFree = key === 'free';
+        var price = p.price || 0;
+        return '<div class="plan-card' + (isCurrent ? ' selected' : '') + (isFree ? ' free' : '') + '" onclick="selecionarPlano(\'' + key + '\')">' +
+          '<div class="plan-card-header">' +
+            '<h3>' + esc(p.name) + '</h3>' +
+            '<span class="plan-price">' + (price > 0 ? price + ' Kz' : 'Grátis') + '</span>' +
+          '</div>' +
+          '<div class="plan-docs">' + (p.docs >= 100 ? 'Documentos ilimitados' : 'Até ' + p.docs + ' documentos') + '</div>' +
+          (isCurrent && currentPlan !== 'free' ? '<span class="plan-badge">Plano atual</span>' : '') +
+          (isFree ? '<span class="plan-badge">' + (currentPlan === 'free' ? 'Plano atual' : 'Gratuito') + '</span>' : '') +
+        '</div>';
+      }).join('');
+
+      var bankAccordion = banks.map(function (b, i) {
+        var isMCX = b.id === 'multicaixa';
+        return '<div class="bank-item' + (i === 0 ? ' open' : '') + '">' +
+          '<div class="bank-item-header" onclick="toggleBank(this)">' +
+            '<span class="bank-logo">' + (b.logo || '🏦') + '</span>' +
+            '<span class="bank-name">' + esc(b.name) + '</span>' +
+            (b.badge ? '<span class="bank-badge">' + b.badge + '</span>' : '') +
+            '<span class="bank-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+          '</div>' +
+          '<div class="bank-item-body">' +
+            (b.titular ? '<div class="bank-titular">Titular: <strong>' + esc(b.titular) + '</strong></div>' : '') +
+            (b.iban ? '<div class="bank-iban-label">' + (isMCX ? 'Número' : 'IBAN') + '</div>' +
+              '<div class="bank-iban-value">' +
+                '<span>' + esc(b.iban) + '</span>' +
+                '<button class="btn-copy" onclick="copiarIBAN(\'' + esc(b.iban) + '\', this)">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar' +
+                '</button>' +
+              '</div>' : '') +
+            '<div class="bank-instructions"><ul>' +
+              b.instructions.map(function (inst) { return '<li>' + esc(inst) + '</li>'; }).join('') +
+            '</ul></div>' +
+            (b.note ? '<div class="bank-note">' + esc(b.note) + '</div>' : '') +
+            '<a href="' + whatsappURL() + '" target="_blank" class="btn-whatsapp">' +
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>' +
+              'Enviar comprovativo pelo WhatsApp' +
+            '</a>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      return '<div class="page">' +
+        '<h1>Planos</h1>' +
+        '<p class="subtitle">Escolhe o plano ideal para ti. Sem fidelização.</p>' +
+        '<div class="plans-grid">' + planCards + '</div>' +
+        '<div class="activation-area">' +
+          '<h3>Já tens um código de ativação?</h3>' +
+          '<p>Insere o código que recebeste no WhatsApp para ativar o teu plano.</p>' +
+          '<div class="activation-row">' +
+            '<input type="text" id="activation-code-input" placeholder="TF-XXXXXX" maxlength="11" style="text-transform:uppercase">' +
+            '<button onclick="ativarCodigo()">Ativar</button>' +
+          '</div>' +
+          '<div id="activation-status" style="margin-top:8px;font-size:13px;color:var(--tf-text-secondary)"></div>' +
+        '</div>' +
+        '<h2 style="margin:30px 0 16px;font-family:var(--tf-font-serif);font-size:18px;">Transferência Bancária</h2>' +
+        '<p class="subtitle">Após escolher o plano, faz o pagamento por transferência e envia-nos o comprovativo.</p>' +
+        '<div class="bank-accordion">' + bankAccordion + '</div>' +
+        '<div style="text-align:center;margin-top:20px;font-size:13px;color:var(--tf-text-muted)">Perguntas? Fala connosco pelo <a href="' + whatsappURL() + '" target="_blank" style="color:var(--tf-accent)">WhatsApp</a></div>' +
+      '</div>';
+    }
+  });
+
+  /* ─── ADMIN ─── */
+
+  Router.register('admin', {
+    title: 'Admin',
+    render: function () {
+      var autenticado = sessionStorage.getItem('tf_admin_auth') === 'true';
+      if (!autenticado) {
+        return '<div class="page"><div class="admin-login">' +
+          '<h2>🔐 Área Administrativa</h2>' +
+          '<p style="font-size:13px;color:var(--tf-text-secondary);margin-bottom:16px">Insere o PIN de administrador</p>' +
+          '<input type="password" id="admin-pin-input" placeholder="PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*">' +
+          '<button class="btn-primary" onclick="adminLogin()" style="width:100%">Entrar</button>' +
+          '<div id="admin-login-error" style="margin-top:10px;font-size:13px;color:#e74c3c"></div>' +
+        '</div></div>';
+      }
+
+      // Admin panel
+      var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
+      var docCount = Storage.listDocs().length;
+      var profileCount = JSON.parse(localStorage.getItem('chave_profiles') || '[]').length || '0';
+
+      var codesHTML = codes.length === 0
+        ? '<p style="color:var(--tf-text-muted);font-size:13px">Nenhum código gerado ainda.</p>'
+        : '<div class="admin-codes">' + codes.slice().reverse().map(function (c) {
+            return '<div class="admin-code-item">' +
+              '<span class="code-value">' + esc(c.code) + '</span>' +
+              '<span>' + (c.plan ? esc(c.plan) : '') + '</span>' +
+              '<span class="code-status ' + c.status + '">' + c.status + '</span>' +
+            '</div>';
+          }).join('') + '</div>';
+
+      return '<div class="page"><div class="admin-panel">' +
+        '<h2>🔐 Administração</h2>' +
+        '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">' +
+          '<div style="flex:1;min-width:120px;padding:14px;background:var(--tf-bg-card);border-radius:var(--tf-radius);border:1px solid var(--tf-border-color)"><div style="font-size:22px;font-weight:700;color:var(--tf-accent)">' + docCount + '</div><div style="font-size:12px;color:var(--tf-text-muted)">Documentos</div></div>' +
+          '<div style="flex:1;min-width:120px;padding:14px;background:var(--tf-bg-card);border-radius:var(--tf-radius);border:1px solid var(--tf-border-color)"><div style="font-size:22px;font-weight:700;color:var(--tf-accent)">' + codes.length + '</div><div style="font-size:12px;color:var(--tf-text-muted)">Códigos</div></div>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="gerarCodigoAdmin()" style="margin-bottom:16px;width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Gerar novo código</button>' +
+        '<h3 style="font-size:16px;font-weight:600;margin-bottom:10px;color:var(--tf-text-primary)">Códigos de Ativação</h3>' +
+        codesHTML +
+        '<button class="btn-secondary" onclick="adminLogout()" style="margin-top:20px;width:100%">Sair do Admin</button>' +
+      '</div></div>';
+    }
+  });
 
   /* ─── DEFINIÇÕES ─── */
 
   Router.register('definicoes', {
     title: 'Definições',
-    render() {
-      const endpoint = localStorage.getItem('chave_ai_endpoint') || '';
-      const isPaid = Storage.isPaid();
-      return `<div class="page">
-        <h1>Definições</h1>
-        <p class="subtitle">Configura a tua experiência na Chave.</p>
+    render: function () {
+      var endpoint = localStorage.getItem('chave_ai_endpoint') || '';
+      var currentTheme = getTheme();
+      var themeOpts = [
+        { id: 'light', label: 'Claro' },
+        { id: 'dark', label: 'Escuro' },
+        { id: 'system', label: 'Sistema' }
+      ];
+      var themeHTML = themeOpts.map(function (t) {
+        return '<label class="theme-option' + (currentTheme === t.id ? ' active' : '') + '" onclick="setTheme(\'' + t.id + '\');Router.go(\'definicoes\')">' +
+          '<span class="theme-icon">' + themeIcon(t.id) + '</span>' +
+          '<span>' + t.label + '</span>' +
+        '</label>';
+      }).join('');
 
-        <div class="settings-section">
-          <h2>IA — Melhoria de Texto</h2>
-          <div class="settings-card">
-            <h3>Endpoint de IA</h3>
-            <p>Conecta a Chave a um Cloudflare Worker para melhorar descrições profissionalmente. Sem endpoint, o modo offline é usado.</p>
-            <div class="form-group" style="margin-bottom:8px">
-              <input type="url" id="ai-endpoint" value="${esc(endpoint)}" placeholder="https://teu-worker.workers.dev">
-            </div>
-            <button class="btn-primary" onclick="guardarEndpoint()" style="width:auto">Guardar</button>
-            ${!endpoint
-              ? '<div class="settings-status info"><span>💡</span> Modo offline ativo — melhorias básicas disponíveis</div>'
-              : '<div class="settings-status success"><span>✓</span> Endpoint configurado</div>'}
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h2>Pagamento</h2>
-          <div class="settings-card">
-            <h3>Exportação de PDF</h3>
-            <p>Os PDFs gratuitos incluem uma marca de água "Pré-visualização — Chave". Paga via Multicaixa Express para remover a marca.</p>
-            ${isPaid
-              ? '<div class="settings-status success"><span>✓</span> Pagamento confirmado — PDFs sem marca de água</div>'
-              : '<div class="settings-status info"><span>💡</span> Marca de água ativa — <a href="#" onclick="PDFExport.exportPreview(\'settings-preview\',\'teste.pdf\');return false" style="color:#c9a96e">testar exportação</a></div>'}
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h2>Sobre</h2>
-          <div class="settings-card">
-            <h3>Chave — Currículos & Documentos</h3>
-            <p>Versão 1.0.0<br>Feito em Angola, para Angola.<br>Criado pela <strong>AGEA Comercial</strong>.</p>
-          </div>
-        </div>
-      </div>`;
+      return '<div class="page">' +
+        '<h1>Definições</h1>' +
+        '<p class="subtitle">Personaliza a tua experiência no Tá Feito.</p>' +
+        '<div class="settings-section"><h2>Aparência</h2>' +
+          '<div class="settings-card"><h3>Tema</h3><p>Escolhe o esquema de cores que preferes.</p>' +
+            '<div class="theme-options">' + themeHTML + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="settings-section"><h2>IA — Melhoria de Texto</h2>' +
+          '<div class="settings-card"><h3>Endpoint de IA</h3><p>Conecta o Tá Feito a um Cloudflare Worker para melhorar descrições. Sem endpoint, o modo offline é usado.</p>' +
+            '<div class="form-group" style="margin-bottom:8px"><input type="url" id="ai-endpoint" value="' + esc(endpoint) + '" placeholder="https://teu-worker.workers.dev"></div>' +
+            '<button class="btn-primary" onclick="guardarEndpoint()" style="width:auto">Guardar</button>' +
+            (!endpoint ? '<div class="settings-status info"><span>💡</span> Modo offline ativo</div>' : '<div class="settings-status success"><span>✓</span> Endpoint configurado</div>') +
+          '</div>' +
+        '</div>' +
+        '<div class="settings-section"><h2>Sobre</h2>' +
+          '<div class="settings-card"><h3>' + CONFIG.brand.name + ' — ' + CONFIG.brand.tagline + '</h3><p>' + CONFIG.brand.slogan + '<br>Versão ' + CONFIG.version + '<br>Feito em Angola, para Angola.<br>Criado pela <strong>AGEA Comercial</strong>.</p></div>' +
+        '</div>' +
+      '</div>';
     }
   });
 
   window.guardarEndpoint = function () {
-    const url = document.getElementById('ai-endpoint')?.value || '';
+    var url = document.getElementById('ai-endpoint')?.value || '';
     if (url && AI) AI.setEndpoint(url);
     else localStorage.setItem('chave_ai_endpoint', url);
     Router.go('definicoes');
   };
 
+  /* ─── HELPER: PLANOS, BANCOS, WHATSAPP ─── */
+
+  window.selecionarPlano = function (key) {
+    localStorage.setItem('tf_selected_plan', key);
+    document.querySelectorAll('.plan-card').forEach(function (c) { c.classList.remove('selected'); });
+    var cards = document.querySelectorAll('.plan-card');
+    var idx = Object.keys(CONFIG.plans).indexOf(key);
+    if (cards[idx]) cards[idx].classList.add('selected');
+  };
+
+  window.toggleBank = function (headerEl) {
+    var item = headerEl.parentElement;
+    var isOpen = item.classList.contains('open');
+    document.querySelectorAll('.bank-item.open').forEach(function (el) { el.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
+  };
+
+  window.copiarIBAN = function (text, btnEl) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        btnEl.classList.add('copied');
+        btnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copiado';
+        setTimeout(function () {
+          btnEl.classList.remove('copied');
+          btnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar';
+        }, 2000);
+      }).catch(function () { fallbackCopy(text, btnEl); });
+    } else {
+      fallbackCopy(text, btnEl);
+    }
+  };
+
+  function fallbackCopy(text, btnEl) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      btnEl.classList.add('copied');
+      btnEl.textContent = 'Copiado!';
+      setTimeout(function () { btnEl.classList.remove('copied'); btnEl.textContent = 'Copiar'; }, 2000);
+    } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  function whatsappURL() {
+    var cfg = CONFIG.whatsapp;
+    var plano = localStorage.getItem('tf_selected_plan') || '';
+    var planoNome = '';
+    if (plano && CONFIG.plans[plano]) planoNome = CONFIG.plans[plano].name;
+    var msg;
+    if (typeof cfg.messageTemplate === 'function') {
+      msg = cfg.messageTemplate({
+        plano: planoNome,
+        nome: Storage.getNome() || '',
+        valor: (plano && CONFIG.plans[plano]) ? CONFIG.plans[plano].price : '',
+        metodo: 'Transferência Bancária'
+      });
+    } else {
+      msg = 'Olá! Quero ativar o plano ' + planoNome + ' do Tá Feito.';
+    }
+    return 'https://wa.me/' + ('' + cfg.number).replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(msg);
+  }
+
+  window.ativarCodigo = function () {
+    var input = document.getElementById('activation-code-input');
+    var statusEl = document.getElementById('activation-status');
+    if (!input || !statusEl) return;
+    var code = input.value.trim().toUpperCase();
+    if (!code) {
+      statusEl.textContent = 'Insere um código de ativação.';
+      statusEl.style.color = '#e74c3c';
+      return;
+    }
+    var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
+    var found = codes.find(function (c) { return c.code === code; });
+    if (!found) {
+      statusEl.textContent = 'Código inválido. Verifica e tenta novamente.';
+      statusEl.style.color = '#e74c3c';
+      return;
+    }
+    if (found.status === 'used') {
+      statusEl.textContent = 'Este código já foi usado.';
+      statusEl.style.color = '#e74c3c';
+      return;
+    }
+    if (found.status === 'expired') {
+      statusEl.textContent = 'Este código expirou. Pede um novo.';
+      statusEl.style.color = '#e74c3c';
+      return;
+    }
+    // Expiry check
+    if (found.expiresAt && Date.now() > new Date(found.expiresAt).getTime()) {
+      found.status = 'expired';
+      localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
+      statusEl.textContent = 'Este código expirou. Pede um novo.';
+      statusEl.style.color = '#e74c3c';
+      return;
+    }
+    // Activate
+    found.status = 'used';
+    found.activatedAt = new Date().toISOString();
+    found.activatedBy = Storage.getNome() || 'unknown';
+    localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
+    localStorage.setItem('tf_plan', found.plan || 'basico');
+    localStorage.setItem('tf_activated_at', new Date().toISOString());
+    input.value = '';
+    statusEl.textContent = '✅ Plano ativado com sucesso!';
+    statusEl.style.color = '#2ecc71';
+    setTimeout(function () { Router.go('planos'); }, 1500);
+  };
+
+  /* ─── ADMIN FUNCTIONS ─── */
+
+  window.adminLogin = function () {
+    var pin = document.getElementById('admin-pin-input');
+    var errorEl = document.getElementById('admin-login-error');
+    if (!pin || !errorEl) return;
+    var pinVal = pin.value.trim();
+    if (pinVal === CONFIG.admin.localPin) {
+      sessionStorage.setItem('tf_admin_auth', 'true');
+      Router.go('admin');
+    } else {
+      errorEl.textContent = 'PIN incorreto. Tenta novamente.';
+    }
+  };
+
+  window.adminLogout = function () {
+    sessionStorage.removeItem('tf_admin_auth');
+    Router.go('admin');
+  };
+
+  window.gerarCodigoAdmin = function () {
+    var planKeys = Object.keys(CONFIG.plans);
+    var nonFree = planKeys.filter(function (k) { return k !== 'free'; });
+    var selectedPlan = prompt('Plano para o código? (' + nonFree.join(', ') + ')', 'basico');
+    if (!selectedPlan) return;
+    if (!CONFIG.plans[selectedPlan]) {
+      alert('Plano inválido. Usa: ' + nonFree.join(', '));
+      return;
+    }
+    var prefix = CONFIG.activation.prefix || 'TF-';
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var code = prefix;
+    for (var i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    var expiryHours = CONFIG.activation.expiryHours || 48;
+    var expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
+    var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
+    codes.push({
+      code: code,
+      plan: selectedPlan,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt,
+      createdBy: 'admin'
+    });
+    localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
+    alert('Código gerado: ' + code + '\nExpira em: ' + new Date(expiresAt).toLocaleString('pt-PT') + '\n' + expiryHours + 'h de validade.');
+    Router.go('admin');
+  };
+
   /* ─── PREVIEW SCALING ─── */
 
   function scalePreview(frameId) {
-    const frame = document.getElementById(frameId);
+    var frame = document.getElementById(frameId);
     if (!frame) return;
-    const wrap = frame.parentElement;
+    var wrap = frame.parentElement;
     if (!wrap) return;
-    const modelo = frame.querySelector('.cv-modelo') || frame.querySelector('.documento');
+    var modelo = frame.querySelector('.cv-modelo') || frame.querySelector('.documento');
     if (!modelo) return;
 
-    const wrapWidth = wrap.clientWidth - 32;
+    var wrapWidth = wrap.clientWidth - 32;
     if (wrapWidth <= 0) return;
-
-    const modeloWidth = 210;
-    const scale = Math.min(1, wrapWidth / modeloWidth);
+    var modeloWidth = 210;
+    var scale = Math.min(1, wrapWidth / modeloWidth);
 
     if (scale < 1) {
       modelo.style.transform = 'scale(' + scale + ')';
@@ -470,16 +1729,43 @@
   window.scalePreview = scalePreview;
 
   window.addEventListener('resize', function () {
-    if (Router.current === 'pre-visualizar-cv' || Router.current === 'pre-visualizar-doc') {
+    if (Router.current === 'preview-doc') {
       scalePreview('preview-frame');
+    }
+    if (Router.current === 'editar-doc') {
+      scalePreview('edit-preview-frame');
     }
   });
 
   /* ─── START ─── */
+
+  injectLogo();
+  initTheme();
 
   Router.go('home');
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
   }
+
+  /* ─── ROUTE HOOK: update document title ─── */
+  var origGo = Router.go;
+  Router.go = function (route) {
+    origGo(route);
+    var cleanName = route.split('?')[0];
+    var routeDef = Router.routes[cleanName];
+    if (routeDef && routeDef.title) {
+      document.title = routeDef.title + ' — ' + CONFIG.brand.name;
+    }
+  };
+
+  /* ─── GLOBAL MASCOT HELPER ─── */
+  window.renderMascot = function (size, cls) {
+    size = size || 48;
+    cls = cls || '';
+    return '<div class="tf-mascot tf-mascot-' + (size <= 32 ? 'sm' : size <= 48 ? 'md' : size <= 72 ? 'lg' : 'xl') + ' ' + cls + '">' +
+      mascotSVG(size, 'smile') +
+    '</div>';
+  };
+
 })();

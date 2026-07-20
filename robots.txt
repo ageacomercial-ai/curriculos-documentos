@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ta-feito-documentos.vercel.app/sitemap.xml

@@ -1,21 +1,107 @@
+/* ─── TÁ FEITO — DESIGN TOKENS ─── */
+
 :root {
-  --brand-navy: #1a2332;
-  --brand-navy-light: #2a3a4e;
-  --brand-gold: #c9a96e;
-  --brand-gold-light: #e0c99a;
-  --brand-cream: #f8f6f3;
-  --brand-cream-dark: #f0ece4;
-  --brand-white: #ffffff;
-  --brand-text: #2c3e50;
-  --brand-text-light: #7f8c8d;
-  --brand-text-muted: #aab3bc;
-  --brand-border: #e0ddd9;
-  --brand-radius: 12px;
-  --brand-radius-sm: 8px;
-  --brand-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  --brand-shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
-  --brand-header-h: 56px;
-  --brand-font-serif: 'Playfair Display', Georgia, serif;
-  --brand-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --brand-watermark: "Chave";
+  /* Brand colours */
+  --tf-black: #1a1a2e;
+  --tf-black-light: #2a2a3e;
+  --tf-green: #2ecc71;
+  --tf-green-dark: #27ae60;
+  --tf-green-light: #a8e6cf;
+  --tf-gold: #f39c12;
+  --tf-gold-light: #f7dc6f;
+  --tf-cream: #faf8f5;
+  --tf-cream-dark: #f0ece4;
+  --tf-white: #ffffff;
+  --tf-text: #2c3e50;
+  --tf-text-light: #7f8c8d;
+  --tf-text-muted: #aab3bc;
+  --tf-border: #e0ddd9;
+  --tf-border-light: #f0eee9;
+  --tf-radius: 12px;
+  --tf-radius-sm: 8px;
+  --tf-radius-xs: 6px;
+  --tf-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --tf-shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --tf-shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+  --tf-header-h: 56px;
+  --tf-font-serif: 'Playfair Display', Georgia, serif;
+  --tf-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --tf-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --tf-sidebar-w: 220px;
+  --tf-bottom-nav-h: 64px;
+
+  /* Surfaces — light theme */
+  --tf-bg: #faf8f5;
+  --tf-bg-card: #ffffff;
+  --tf-bg-surface: #f5f3ef;
+  --tf-bg-hover: rgba(46, 204, 113, 0.06);
+  --tf-bg-input: #ffffff;
+  --tf-text-primary: #1a1a2e;
+  --tf-text-secondary: #7f8c8d;
+  --tf-text-muted: #aab3bc;
+  --tf-border-color: #e0ddd9;
+  --tf-accent: #2ecc71;
+  --tf-accent-hover: #27ae60;
+  --tf-accent-soft: rgba(46, 204, 113, 0.12);
+  --tf-watermark-text: 'Tá Feito';
 }
+
+/* ─── DARK THEME ─── */
+[data-theme="dark"] {
+  --tf-bg: #111120;
+  --tf-bg-card: #1a1a2e;
+  --tf-bg-surface: #222240;
+  --tf-bg-hover: rgba(46, 204, 113, 0.1);
+  --tf-bg-input: #1a1a2e;
+  --tf-text-primary: #e8e8f0;
+  --tf-text-secondary: #9a9ab0;
+  --tf-text-muted: #6a6a80;
+  --tf-border-color: #2a2a44;
+  --tf-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --tf-shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
+  --tf-shadow-sm: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+/* ─── CSS Variables legacy mapping ─── */
+:root {
+  --navy: var(--tf-black);
+  --navy-light: var(--tf-black-light);
+  --gold: var(--tf-gold);
+  --gold-light: var(--tf-gold-light);
+  --cream: var(--tf-bg);
+  --cream-dark: var(--tf-cream-dark);
+  --white: #ffffff;
+  --text: var(--tf-text-primary);
+  --text-light: var(--tf-text-secondary);
+  --text-muted: var(--tf-text-muted);
+  --border: var(--tf-border-color);
+  --radius: var(--tf-radius);
+  --radius-sm: var(--tf-radius-sm);
+  --shadow: var(--tf-shadow);
+  --shadow-lg: var(--tf-shadow-lg);
+  --header-h: var(--tf-header-h);
+  --font-serif: var(--tf-font-serif);
+  --font-sans: var(--tf-font-sans);
+  --sidebar-w: 220px;
+  --bottom-nav-h: 64px;
+}
+
+/* ─── CSS reset complementar ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--tf-font-sans);
+  background: var(--tf-bg);
+  color: var(--tf-text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--tf-gold-light); border-radius: 4px; }

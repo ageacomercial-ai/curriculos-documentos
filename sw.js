@@ -1,8 +1,10 @@
-const CACHE_NAME = 'chave-v1';
+const CACHE_NAME = 'ta-feito-v1';
 
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './manifest.json',
+  './robots.txt',
   './css/tokens.css',
   './css/app.css',
   './css/models/classico.css',
@@ -11,6 +13,7 @@ const PRECACHE_URLS = [
   './css/models/criativo.css',
   './css/models/minimalista.css',
   './css/models/doc/documentos.css',
+  './js/config.js',
   './js/router.js',
   './js/storage.js',
   './js/pdf-export.js',
@@ -24,6 +27,7 @@ const PRECACHE_URLS = [
   './js/models/cv/minimalista.js',
   './js/models/doc/renderers.js',
   './js/app.js',
+  './assets/favicon.svg',
   './assets/icons/icon-192.svg',
   './assets/icons/icon-512.svg'
 ];

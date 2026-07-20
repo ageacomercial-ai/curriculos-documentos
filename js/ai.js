@@ -1,7 +1,7 @@
 (function () {
   // Config — set these via env or settings
-  var AI_ENDPOINT = localStorage.getItem('chave_ai_endpoint') || '';
-  var AI_MODEL = 'deepseek-chat';
+  var AI_ENDPOINT = localStorage.getItem('chave_ai_endpoint') || '/api/enhance';
+  var AI_MODEL = 'groq-llama3';
 
   function isConfigured() {
     return AI_ENDPOINT.length > 0;
@@ -103,7 +103,7 @@
    - API_KEY (ex: da DeepSeek, OpenAI, etc)
    - API_URL (ex: https://api.deepseek.com/v1/chat/completions)
 5. Faz deploy e copia o URL do Worker
-6. Em Chave, vai a Definições > IA e cola o URL
+6. No Tá Feito, vai a Definições > IA e cola o URL
         `.trim()
       }
     };

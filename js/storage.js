@@ -1,71 +1,216 @@
 (function () {
-  const STORAGE_PREFIX = 'chave_';
+  var PREFIX = 'chave_';
 
-  const KEYS = {
-    CV: STORAGE_PREFIX + 'cv',
-    CV_LIST: STORAGE_PREFIX + 'cv_list',
-    DOC: STORAGE_PREFIX + 'doc',
-    DOC_TYPE: STORAGE_PREFIX + 'doc_type',
-    PAYMENT: STORAGE_PREFIX + 'payment',
-    SETTINGS: STORAGE_PREFIX + 'settings'
+  var KEYS = {
+    PROFILE: PREFIX + 'profile',
+    DOCS: PREFIX + 'docs',
+    ACTIVE_DOC: PREFIX + 'active_doc',
+    PAYMENT: PREFIX + 'payment',
+    SETTINGS: PREFIX + 'settings'
   };
 
   function get(key) {
     try { return JSON.parse(localStorage.getItem(key)) || null; }
-    catch { return null; }
+    catch (e) { return null; }
   }
 
-  function set(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+  function set(key, val) {
+    localStorage.setItem(key, JSON.stringify(val));
   }
 
   function remove(key) {
     localStorage.removeItem(key);
   }
 
-  // Migrate old keys to new prefix
-  function migrate() {
-    const oldCV = localStorage.getItem('curriculo_dados');
-    if (oldCV && !localStorage.getItem(KEYS.CV)) {
-      localStorage.setItem(KEYS.CV, oldCV);
-    }
-    const oldDoc = localStorage.getItem('documento_dados');
-    if (oldDoc && !localStorage.getItem(KEYS.DOC)) {
-      localStorage.setItem(KEYS.DOC, oldDoc);
-    }
-    const oldDocType = localStorage.getItem('documento_tipo');
-    if (oldDocType && !localStorage.getItem(KEYS.DOC_TYPE)) {
-      localStorage.setItem(KEYS.DOC_TYPE, oldDocType);
-    }
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  const Storage = {
+  function timeAgo(dateStr) {
+    var now = new Date();
+    var d = new Date(dateStr);
+    var diff = Math.floor((now - d) / 1000);
+    if (diff < 10) return 'agora';
+    if (diff < 60) return 'há ' + diff + 's';
+    var min = Math.floor(diff / 60);
+    if (min < 60) return 'há ' + min + 'min';
+    var h = Math.floor(min / 60);
+    if (h < 24) return 'há ' + h + 'h';
+    return 'há ' + Math.floor(h / 24) + 'd';
+  }
+
+  function formatDate(dateStr) {
+    var d = new Date(dateStr);
+    var meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function migrate() {
+    if (!get(KEYS.PROFILE)) {
+      var oldCV = get('curriculo_dados') || get(PREFIX + 'cv');
+      if (oldCV) {
+        var profile = {
+          nome: oldCV.nome || '',
+          cargo: oldCV.cargo || '',
+          email: oldCV.email || '',
+          telefone: oldCV.telefone || '',
+          morada: oldCV.morada || '',
+          social: oldCV.social || '',
+          foto: oldCV.foto || '',
+          resumo: oldCV.resumo || '',
+          experiencias: oldCV.experiencias || [],
+          formacoes: oldCV.formacoes || [],
+          competencias: oldCV.competencias || [],
+          idiomas: oldCV.idiomas || [],
+          certificacoes: []
+        };
+        set(KEYS.PROFILE, profile);
+        set(KEYS.ACTIVE_DOC, { id: 'cv-principal', type: 'cv', name: 'CV Principal', model: oldCV.modelo || 'classico', updatedAt: new Date().toISOString(), data: profile });
+        var docs = [
+          { id: 'cv-principal', type: 'cv', name: 'CV Principal', model: oldCV.modelo || 'classico', updatedAt: new Date().toISOString() }
+        ];
+        set(KEYS.DOCS, docs);
+      }
+    }
+    // Clean old keys
+    ['curriculo_dados', 'documento_dados', 'documento_tipo', PREFIX + 'cv', PREFIX + 'doc', PREFIX + 'doc_type'].forEach(function (k) {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+  }
+
+  var Storage = {
     KEYS: KEYS,
     get: get,
     set: set,
     remove: remove,
+    generateId: generateId,
+    timeAgo: timeAgo,
+    formatDate: formatDate,
     migrate: migrate,
 
-    // CV-specific
-    loadCV: function () { return get(KEYS.CV) || {}; },
-    saveCV: function (d) { set(KEYS.CV, d); },
-    listCVs: function () { return get(KEYS.CV_LIST) || []; },
-    saveCVList: function (list) { set(KEYS.CV_LIST, list); },
+    // ─── PERFIL CENTRAL ───
 
-    // Doc-specific
-    loadDoc: function () { return get(KEYS.DOC) || {}; },
-    saveDoc: function (d) { set(KEYS.DOC, d); },
-    getDocType: function () { return get(KEYS.DOC_TYPE) || ''; },
-    setDocType: function (t) { set(KEYS.DOC_TYPE, t); },
+    getProfile: function () {
+      return get(KEYS.PROFILE) || {
+        nome: '', cargo: '', email: '', telefone: '', morada: '', social: '', foto: '', resumo: '',
+        experiencias: [], formacoes: [], competencias: [], idiomas: [], certificacoes: []
+      };
+    },
 
-    // Payment
+    saveProfile: function (p) {
+      set(KEYS.PROFILE, p);
+    },
+
+    profileCompletion: function () {
+      var p = this.getProfile();
+      var total = 0, done = 0;
+      if (p.nome && p.nome.trim()) done++; total++;
+      if (p.email && p.email.trim()) done++; total++;
+      if (p.telefone && p.telefone.trim()) done++; total++;
+      if (p.cargo && p.cargo.trim()) done++; total++;
+      if (p.resumo && p.resumo.trim()) done++; total++;
+      if (p.morada && p.morada.trim()) done++; total++;
+      if ((p.experiencias || []).filter(function (e) { return e.cargo; }).length > 0) done++; total++;
+      if ((p.formacoes || []).filter(function (f) { return f.curso; }).length > 0) done++; total++;
+      if ((p.competencias || []).filter(function (s) { return s.nome; }).length > 0) done++; total++;
+      if ((p.idiomas || []).filter(function (l) { return l.idioma; }).length > 0 && total) done++; total++;
+      return { pct: Math.round((done / total) * 100), done: done, total: total };
+    },
+
+    getNome: function () {
+      var p = this.getProfile();
+      return p.nome || 'Utilizador';
+    },
+
+    // ─── DOCUMENTOS ───
+
+    listDocs: function () {
+      return get(KEYS.DOCS) || [];
+    },
+
+    saveDocList: function (list) {
+      set(KEYS.DOCS, list);
+    },
+
+    getDocData: function (docId) {
+      var all = get(PREFIX + 'docdata') || {};
+      return all[docId] || null;
+    },
+
+    saveDocData: function (docId, data) {
+      var all = get(PREFIX + 'docdata') || {};
+      all[docId] = data;
+      set(PREFIX + 'docdata', all);
+    },
+
+    removeDocData: function (docId) {
+      var all = get(PREFIX + 'docdata') || {};
+      delete all[docId];
+      set(PREFIX + 'docdata', all);
+    },
+
+    createDoc: function (type, name, model) {
+      var id = this.generateId();
+      var now = new Date().toISOString();
+      var docs = this.listDocs();
+      docs.unshift({ id: id, type: type, name: name, model: model || 'classico', updatedAt: now });
+      this.saveDocList(docs);
+      return id;
+    },
+
+    updateDoc: function (id, updates) {
+      var docs = this.listDocs();
+      var found = false;
+      docs.forEach(function (d) {
+        if (d.id === id) {
+          for (var k in updates) d[k] = updates[k];
+          d.updatedAt = new Date().toISOString();
+          found = true;
+        }
+      });
+      if (found) this.saveDocList(docs);
+      return found;
+    },
+
+    deleteDoc: function (id) {
+      var docs = this.listDocs().filter(function (d) { return d.id !== id; });
+      this.saveDocList(docs);
+      this.removeDocData(id);
+    },
+
+    duplicateDoc: function (id) {
+      var docs = this.listDocs();
+      var orig = null;
+      docs.forEach(function (d) { if (d.id === id) orig = d; });
+      if (!orig) return null;
+      var data = this.getDocData(id);
+      var newId = this.generateId();
+      var now = new Date().toISOString();
+      docs.unshift({ id: newId, type: orig.type, name: orig.name + ' (cópia)', model: orig.model, updatedAt: now });
+      this.saveDocList(docs);
+      if (data) this.saveDocData(newId, JSON.parse(JSON.stringify(data)));
+      return newId;
+    },
+
+    getActiveDoc: function () {
+      return get(KEYS.ACTIVE_DOC) || null;
+    },
+
+    setActiveDoc: function (doc) {
+      set(KEYS.ACTIVE_DOC, doc);
+    },
+
+    // ─── PAYMENT ───
+
     isPaid: function () {
-      const p = get(KEYS.PAYMENT);
+      var p = get(KEYS.PAYMENT);
       return p && p.confirmed === true;
     },
+
     setPaid: function (ref) {
       set(KEYS.PAYMENT, { ref: ref, confirmed: true, date: new Date().toISOString() });
     },
+
     getPayment: function () { return get(KEYS.PAYMENT); },
     clearPayment: function () { remove(KEYS.PAYMENT); }
   };

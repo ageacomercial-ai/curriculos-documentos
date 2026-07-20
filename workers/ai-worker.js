@@ -1,9 +1,9 @@
-// Cloudflare Worker — Proxy de IA para a Chave
-// Faz o relay seguro entre a app e a API de IA (DeepSeek, OpenAI, etc)
-// sem expor a chave de API ao cliente.
+// Cloudflare Worker — Proxy de IA para o Tá Feito
+// Faz o relay seguro entre a app e a API Groq sem expor a chave ao cliente.
 
 const ALLOWED_ORIGINS = [
   'https://ageacomercial-ai.github.io',
+  'https://ta-feito-documentos.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'file://'

@@ -1,11 +1,12 @@
 {
-  "name": "Chave — Currículos & Documentos",
-  "short_name": "Chave",
-  "description": "Cria currículos e documentos profissionais no teu telemóvel, com modelos premium prontos a exportar",
+  "name": "Tá Feito — Documentos Profissionais",
+  "short_name": "Tá Feito",
+  "description": "Cria currículos, declarações, cartas e documentos profissionais com modelos premium",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f8f6f3",
-  "theme_color": "#1a2332",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1a1a2e",
+  "scope": ".",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "assets/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" },
