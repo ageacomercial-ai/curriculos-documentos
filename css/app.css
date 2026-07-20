@@ -927,6 +927,13 @@
   -webkit-appearance: none;
 }
 
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group textarea,
+[data-theme="dark"] .form-group select {
+  background: var(--tf-bg-input);
+  color: var(--tf-text-primary);
+}
+
 .form-group input:focus,
 .form-group textarea:focus {
   border-color: var(--gold);
@@ -1993,4 +2000,177 @@
   #app-content { overflow: visible; }
   .preview-container { box-shadow: none; border-radius: 0; background: none; }
   #preview-frame { padding: 0; background: none; }
+}
+
+/* ─── HOME CARDS ─── */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+.home-card {
+  padding: 32px 20px;
+  background: var(--tf-bg-card);
+  border: 1.5px solid var(--tf-border-color);
+  border-radius: var(--tf-radius);
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+}
+.home-card:hover {
+  border-color: var(--tf-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--tf-shadow-lg);
+}
+.home-card-icon {
+  margin-bottom: 12px;
+}
+.home-card h2 {
+  font-family: var(--tf-font-serif);
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--tf-text-primary);
+  margin-bottom: 6px;
+}
+.home-card p {
+  font-size: 13px;
+  color: var(--tf-text-muted);
+  line-height: 1.4;
+}
+
+/* ─── MODEL PREVIEW GRID ─── */
+.model-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+.model-preview-card {
+  background: var(--tf-bg-card);
+  border: 1.5px solid var(--tf-border-color);
+  border-radius: var(--tf-radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.model-preview-card:hover {
+  border-color: var(--tf-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--tf-shadow-lg);
+}
+.model-preview-thumb {
+  padding: 0;
+  min-height: 220px;
+  max-height: 280px;
+  overflow: hidden;
+  background: #ffffff;
+  position: relative;
+}
+.model-preview-cv {
+  transform: scale(0.25);
+  transform-origin: top left;
+  width: 840px;
+  height: 1188px;
+  overflow: hidden;
+}
+.model-preview-label {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tf-text-primary);
+  border-top: 1px solid var(--tf-border-color);
+  text-align: center;
+}
+
+/* ─── WIZARD CV INPUTS ─── */
+.wizard-perguntas .form-group {
+  margin-bottom: 16px;
+}
+.wizard-cv-input,
+.wizard-perguntas input,
+.wizard-perguntas textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--tf-border-color);
+  border-radius: var(--tf-radius-sm);
+  background: var(--tf-bg-input);
+  color: var(--tf-text-primary);
+  font-family: var(--tf-font-sans);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.wizard-cv-input:focus,
+.wizard-perguntas input:focus,
+.wizard-perguntas textarea:focus {
+  border-color: var(--tf-accent);
+}
+.wizard-perguntas textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ─── MASCOT ANIMATIONS ─── */
+.tf-mascot-svg {
+  display: inline-block;
+  vertical-align: middle;
+  animation: mascotIdle 4s ease-in-out infinite;
+}
+@keyframes mascotIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.mascot-bounce {
+  animation: mascotBounce 2s ease-in-out infinite;
+}
+@keyframes mascotBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-6px) scale(1.05); }
+  50% { transform: translateY(0) scale(1); }
+  70% { transform: translateY(-3px) scale(1.02); }
+}
+.mascot-wave {
+  animation: mascotWave 1.5s ease-in-out infinite;
+}
+@keyframes mascotWave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+/* ─── PLAN DESC ─── */
+.plan-desc {
+  font-size: 11px;
+  color: var(--tf-text-muted);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* ─── DASHBOARD EMBLEM ─── */
+.dashboard-emblem {
+  text-align: center;
+  margin-bottom: 8px;
+}
+.dashboard-emblem svg {
+  width: 80px;
+  height: auto;
+  color: var(--tf-text-primary);
+}
+
+/* ─── PWA INSTALL BUTTON ─── */
+.btn-install-pwa {
+  background: var(--tf-accent);
+  color: #fff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.btn-install-pwa:hover {
+  opacity: 0.85;
 }

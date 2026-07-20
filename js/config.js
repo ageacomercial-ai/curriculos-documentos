@@ -10,19 +10,20 @@ const CONFIG = {
     description: 'Plataforma de criação de documentos profissionais.',
     locale: 'pt-AO',
     currency: 'Kz',
-    year: new Date().getFullYear()
+    year: new Date().getFullYear(),
+    company: 'AGEA Soluções Tecnológicas'
   },
 
   // ─── PLANOS ───
   plans: {
-    free: { name: 'Grátis', docs: 3, price: 0, watermark: true },
+    avulso: { name: 'Avulso', docs: 1, price: 1000, watermark: false, desc: 'Pagas apenas pelo documento que estás a criar agora.' },
     basic: { name: 'Básico', docs: 20, price: 2500, watermark: false },
     pro: { name: 'Profissional', docs: 50, price: 5000, watermark: false },
     unlimited: { name: 'Ilimitado', docs: 100, price: 8500, watermark: false }
   },
 
   // ─── PREÇO POR DOCUMENTO AVULSO ───
-  perDocPrice: 500,
+  perDocPrice: 1000,
 
   // ─── CÓDIGOS DE ACTIVAÇÃO ───
   activation: {
@@ -32,8 +33,6 @@ const CONFIG = {
 
   // ─── ADMINISTRAÇÃO ───
   admin: {
-    // PIN será validado via backend/worker. Este é apenas fallback local.
-    localPin: '2468'
   },
 
   // ─── MÉTODOS DE PAGAMENTO ───
@@ -119,7 +118,7 @@ const CONFIG = {
   ai: {
     provider: 'groq',
     model: 'llama3-70b-8192',
-    // O endpoint do worker será configurado via Definições
+    // O endpoint do worker é configurado automaticamente
     defaultEndpoint: '',
     maxTokens: 1024,
     temperature: 0.7

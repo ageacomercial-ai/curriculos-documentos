@@ -2,10 +2,18 @@
   function esc(s) { if (s == null) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 
   /* ─── LOGO SVG ─── */
-  function logoSVG() {
-    return '<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect x="2" y="2" width="36" height="36" rx="8" stroke="#2ecc71" stroke-width="3" fill="none"/>' +
-      '<path d="M12 20 L18 26 L28 14" stroke="#2ecc71" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+  function logoSVG(big) {
+    big = big || false;
+    if (big) {
+      return '<svg viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<rect x="42" y="2" width="36" height="36" rx="8" stroke="#2ecc71" stroke-width="3" fill="none"/>' +
+        '<path d="M52 20 L58 26 L68 14" stroke="#2ecc71" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '<text x="60" y="72" text-anchor="middle" font-family="Inter,sans-serif" font-size="22" font-weight="700" fill="currentColor">Tá Feito</text>' +
+      '</svg>';
+    }
+    return '<svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="6" y="2" width="28" height="28" rx="6" stroke="#2ecc71" stroke-width="2.5" fill="none"/>' +
+      '<path d="M14 16 L20 22 L26 12" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
     '</svg>';
   }
 
@@ -16,7 +24,9 @@
     expression = expression || 'smile';
     var eyes = expression === 'wink'
       ? '<ellipse cx="15" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/><path d="M24 17 L27 20 L30 17" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
-      : '<ellipse cx="15" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/><ellipse cx="27" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/>';
+      : expression === 'blink'
+        ? '<path d="M12 18 Q15 16 18 18" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M24 18 Q27 16 30 18" stroke="#1a1a2e" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
+        : '<ellipse cx="15" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/><ellipse cx="27" cy="18" rx="2.5" ry="2.5" fill="#1a1a2e"/>';
     var mouth = expression === 'smile'
       ? '<path d="M16 26 Q21 31 26 26" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round" fill="none"/>'
       : expression === 'wink'
@@ -31,6 +41,36 @@
   }
 
   window.mascotSVG = mascotSVG;
+
+  /* ─── MASCOT BLINK TIMER ─── */
+  var mascotBlinkTimer = null;
+  function startMascotBlink() {
+    if (mascotBlinkTimer) clearInterval(mascotBlinkTimer);
+    function doBlink() {
+      var els = document.querySelectorAll('.tf-mascot-svg');
+      els.forEach(function (el) {
+        var size = el.getAttribute('width') || 42;
+        var newSvg = mascotSVG(size, 'blink');
+        el.outerHTML = newSvg;
+      });
+      setTimeout(function () {
+        var els2 = document.querySelectorAll('.tf-mascot-svg');
+        els2.forEach(function (el) {
+          var size = el.getAttribute('width') || 42;
+          var newSvg = mascotSVG(size, 'smile');
+          el.outerHTML = newSvg;
+        });
+      }, 150);
+    }
+    function scheduleNext() {
+      var delay = 2000 + Math.random() * 5000;
+      mascotBlinkTimer = setTimeout(function () {
+        doBlink();
+        scheduleNext();
+      }, delay);
+    }
+    scheduleNext();
+  }
 
   /* ─── INJECT LOGO ─── */
   function injectLogo() {
@@ -120,68 +160,30 @@
     title: 'Início',
     render: function () {
       var nome = Storage.getNome();
-      var profile = Storage.getProfile();
-      var comp = Storage.profileCompletion();
-      var docs = Storage.listDocs();
-      var recentes = docs.slice(0, 3);
-      var isPaid = Storage.isPaid();
-      var docCount = docs.length;
-      var expCount = (profile.experiencias || []).filter(function (e) { return e.cargo; }).length;
-      var formCount = (profile.formacoes || []).filter(function (f) { return f.curso; }).length;
 
       return '<div class="page">' +
         '<div class="dashboard-hero">' +
           '<div class="dashboard-emblem">' +
-            logoSVG() +
+            logoSVG(true) +
           '</div>' +
           '<h1>' + saudacao() + ', ' + esc(nome.split(' ')[0]) + ' ' + renderMascot(36, 'mascot-bounce') + '</h1>' +
           '<p class="subtitle">O que precisas de deixar <strong>feito</strong> hoje?</p>' +
         '</div>' +
-        '<button class="btn-primary btn-create" onclick="navegar(\'novo-documento\')">' +
-          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Criar novo documento' +
-        '</button>' +
-
-        // Profile completion
-        '<div class="profile-completion-card" onclick="navegar(\'perfil\')">' +
-          '<div class="profile-completion-header">' +
-            '<h3>Perfil Profissional</h3>' +
-            '<span class="profile-completion-pct">' + comp.pct + '%</span>' +
+        '<div class="home-grid">' +
+          '<div class="home-card home-card-cv" onclick="navegar(\'cv-flow\')">' +
+            '<div class="home-card-icon">' +
+              '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+            '</div>' +
+            '<h2>CURRÍCULO VITAE</h2>' +
+            '<p>Cria um currículo profissional com modelos premium.</p>' +
           '</div>' +
-          '<div class="profile-completion-bar">' +
-            '<div class="profile-completion-fill" style="width:' + comp.pct + '%"></div>' +
+          '<div class="home-card home-card-doc" onclick="navegar(\'outros-documentos\')">' +
+            '<div class="home-card-icon">' +
+              '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg>' +
+            '</div>' +
+            '<h2>OUTROS DOCUMENTOS</h2>' +
+            '<p>Declarações, cartas, contratos, requerimentos e mais.</p>' +
           '</div>' +
-          '<span class="profile-completion-link">' + (comp.pct < 100 ? 'Completar perfil →' : 'Ver perfil →') + '</span>' +
-        '</div>' +
-
-        // Recent documents
-        (recentes.length > 0
-          ? '<div class="recent-docs"><h3>Documentos Recentes</h3>' +
-            recentes.map(function (d) {
-              var tipoLabel = d.type === 'cv' ? 'CV' : 'Documento';
-              return '<div class="recent-doc-item" onclick="abrirDoc(\'' + d.id + '\')">' +
-                '<div class="recent-doc-icon">' +
-                  (d.type === 'cv'
-                    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
-                    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg>') +
-                '</div>' +
-                '<div class="recent-doc-info">' +
-                  '<strong>' + esc(d.name) + '</strong>' +
-                  '<span>' + Storage.timeAgo(d.updatedAt) + '</span>' +
-                '</div>' +
-                '<button class="btn-icon-sm" onclick="event.stopPropagation();abrirDoc(\'' + d.id + '\')" aria-label="Abrir">' +
-                  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
-                '</button>' +
-              '</div>';
-            }).join('') +
-            '<div class="recent-docs-footer"><a href="#" onclick="navegar(\'documentos\');return false">Ver todos os documentos →</a></div>' +
-          '</div>'
-          : '<div class="empty-state"><p>Ainda não tem documentos. Crie o primeiro!</p></div>'
-        ) +
-
-        // Tips
-        '<div class="home-tip">' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
-          '<span>Preencha o seu perfil uma vez e reuse os dados em todos os documentos.</span>' +
         '</div>' +
       '</div>';
     }
@@ -225,13 +227,13 @@
       return '<div class="page page-docs">' +
         '<div class="page-header-row">' +
           '<h1>Documentos</h1>' +
-          '<button class="btn-create-sm" onclick="navegar(\'novo-documento\')">' +
+           '<button class="btn-create-sm" onclick="navegar(\'cv-flow\')">' +
             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo' +
           '</button>' +
         '</div>' +
         (docs.length > 0
           ? '<div class="doc-list">' + docs.map(renderDoc).join('') + '</div>'
-          : '<div class="empty-state"><p>Nenhum documento ainda.</p><button class="btn-primary" onclick="navegar(\'novo-documento\')">Criar primeiro documento</button></div>'
+           : '<div class="empty-state"><p>Nenhum documento ainda.</p><button class="btn-primary" onclick="navegar(\'cv-flow\')">Criar primeiro documento</button></div>'
         ) +
       '</div>';
     }
@@ -290,7 +292,7 @@
           '<div id="perfil-exp-container">' + (p.experiencias || []).map(function (e, i) {
             return '<div class="exp-item"><div class="form-row">' +
               '<div class="form-group"><label>Cargo</label><input type="text" name="perfil-exp-cargo-' + i + '" value="' + esc(e.cargo) + '" placeholder="Ex.: Diretor"></div>' +
-              '<div class="form-group"><label>Empresa</label><input type="text" name="perfil-exp-empresa-' + i + '" value="' + esc(e.empresa) + '" placeholder="Ex.: AGEA Comercial"></div></div>' +
+              '<div class="form-group"><label>Empresa</label><input type="text" name="perfil-exp-empresa-' + i + '" value="' + esc(e.empresa) + '" placeholder="Ex.: AGEA Soluções Tecnológicas"></div></div>' +
               '<div class="form-row"><div class="form-group"><label>Início</label><input type="text" name="perfil-exp-inicio-' + i + '" value="' + esc(e.inicio) + '" placeholder="Ex.: 2020"></div>' +
               '<div class="form-group"><label>Fim</label><input type="text" name="perfil-exp-fim-' + i + '" value="' + esc(e.fim) + '" placeholder="Ex.: Presente"></div></div>' +
               '<div class="form-group"><label>Descrição</label><textarea name="perfil-exp-descricao-' + i + '" placeholder="Descreva as responsabilidades..." rows="3">' + esc(e.descricao) + '</textarea></div>' +
@@ -391,12 +393,12 @@
         '<h1>Escolher Tipo</h1>' +
         '<p class="subtitle">O que desejas criar?</p>' +
         '<div class="card-grid">' +
-          '<div class="card" onclick="iniciarCriarCV()">' +
+          '<div class="card" onclick="Router.go(\'cv-flow\')">' +
             '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
             '<h3>Currículo / CV</h3>' +
-            '<p>Cria um currículo profissional com os teus dados de perfil.</p>' +
+            '<p>Cria um currículo profissional.</p>' +
           '</div>' +
-          '<div class="card" onclick="iniciarCriarDoc()">' +
+          '<div class="card" onclick="Router.go(\'outros-documentos\')">' +
             '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="9" y2="9"/></svg></div>' +
             '<h3>Documento Profissional</h3>' +
             '<p>Declarações, cartas, contratos, requerimentos e mais.</p>' +
@@ -547,7 +549,7 @@
 
   window.wizardVoltarInicio = function () {
     limparWizard();
-    Router.go('novo-documento');
+    Router.go('cv-flow');
   };
 
   window.wizardAvancarDescricao = function () {
@@ -658,7 +660,7 @@
 
   window.cancelarWizard = function () {
     limparWizard();
-    Router.go('novo-documento');
+    Router.go('cv-flow');
   };
 
   function gerarPerguntasWizard(tipo, descricao) {
@@ -681,56 +683,146 @@
     ];
   }
 
-  /* ─── CRIAR CV / ESCOLHER MODELO ─── */
+  /* ─── FLUXO CV: SOZINHO vs AJUDA ─── */
 
-  window.iniciarCriarCV = function () {
-    Router.go('escolher-modelo');
-  };
-
-  Router.register('escolher-modelo', {
-    title: 'Escolher Modelo',
+  Router.register('cv-flow', {
+    title: 'Criar Currículo',
     render: function () {
-      var modelos = ModelRegistry.list('cv');
-      var profile = Storage.getProfile();
-      var suggestion = AI && AI.suggestModel ? AI.suggestModel(profile.cargo) : null;
       return '<div class="page">' +
-        '<h1>Escolher Modelo</h1>' +
-        '<p class="subtitle">Selecione um modelo para o seu currículo. Pode trocar depois.</p>' +
-        (suggestion ? '<div class="model-suggestion" onclick="criarCVComModelo(\'' + suggestion.model + '\')"><strong>💡 Sugestão:</strong> ' + esc(suggestion.reason) + '</div>' : '') +
-        '<div class="model-selector">' +
-          modelos.map(function (m) {
-            return '<div class="model-option" onclick="criarCVComModelo(\'' + m.id + '\')">' +
-              '<span class="model-dot"></span> ' + esc(m.name) +
-            '</div>';
-          }).join('') +
+        '<h1>Criar Currículo / CV</h1>' +
+        '<p class="subtitle">Como queres criar o teu documento?</p>' +
+        '<div class="choice-cards" style="margin-top:20px">' +
+          '<div class="choice-card" onclick="Router.go(\'escolher-modelo-cv\')">' +
+            '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>' +
+            '<div class="choice-text"><h3>QUERO FAZER SOZINHO</h3><p>Escolhes o modelo e escreves à tua maneira.</p></div>' +
+          '</div>' +
+          '<div class="choice-card" onclick="Router.go(\'wizard-cv\')">' +
+            '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+            '<div class="choice-text"><h3>QUERO AJUDA</h3><p>Respondes a algumas perguntas e geramos o CV por ti.</p></div>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }
   });
 
+  /* ─── ESCOLHER MODELO (visual) ─── */
+
+  Router.register('escolher-modelo-cv', {
+    title: 'Escolher Modelo',
+    render: function () {
+      var modelos = ModelRegistry.list('cv');
+      var profile = Storage.getProfile();
+      if (profile.nome) {
+        return '<div class="page">' +
+          '<h1>Usar dados do perfil?</h1>' +
+          '<p class="subtitle">Tens dados guardados no teu perfil. Queres usá-los neste currículo?</p>' +
+          '<div class="choice-cards" style="margin-top:20px">' +
+            '<div class="choice-card" onclick="prosseguirCriarCV(true)">' +
+              '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+              '<div class="choice-text"><h3>SIM, usar meus dados</h3><p>Vou criar o currículo para mim mesmo.</p></div>' +
+            '</div>' +
+            '<div class="choice-card" onclick="prosseguirCriarCV(false)">' +
+              '<div class="choice-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>' +
+              '<div class="choice-text"><h3>NÃO, começar vazio</h3><p>Estou a criar para outra pessoa ou quero dados diferentes.</p></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }
+      return renderModelosCV();
+    }
+  });
+
+  function renderModelosCV() {
+    var modelos = ModelRegistry.list('cv');
+    var demoData = gerarDadosDemoCV();
+    return '<div class="page">' +
+      '<h1>Escolher Modelo</h1>' +
+      '<p class="subtitle">Vê os currículos preenchidos com dados de exemplo. O teu conteúdo substituirá estes.</p>' +
+      '<div class="model-preview-grid">' +
+        modelos.map(function (m) {
+          var html = '';
+          try {
+            var modeloDef = ModelRegistry.get('cv', m.id);
+            if (modeloDef && typeof modeloDef.render === 'function') {
+              html = modeloDef.render(demoData);
+            }
+          } catch (e) {
+            html = '<div style="padding:20px;text-align:center;color:var(--tf-text-muted)">Pré-visualização indisponível</div>';
+          }
+          return '<div class="model-preview-card" onclick="criarCVComModelo(\'' + m.id + '\')">' +
+            '<div class="model-preview-thumb">' +
+              '<div class="model-preview-cv">' + html + '</div>' +
+            '</div>' +
+            '<div class="model-preview-label">' + esc(m.name) + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  function gerarDadosDemoCV() {
+    return {
+      nome: 'Maria das Graças',
+      cargo: 'Designer Gráfica Sénior',
+      email: 'maria.gracas@email.com',
+      telefone: '+244 923 456 789',
+      morada: 'Luanda, Angola',
+      social: 'linkedin.com/in/mariagracas',
+      resumo: 'Designer Gráfica com mais de 8 anos de experiência em branding, design editorial e identidade visual. Especialista em criar soluções visuais que comunicam a essência de cada marca.',
+      experiencias: [
+        { cargo: 'Designer Gráfica Sénior', empresa: 'Agência Criativa, Luanda', inicio: '2020', fim: 'Presente', descricao: 'Liderança de equipa criativa de 5 designers. Desenvolvimento de identidade visual para mais de 30 marcas. Gestão de projetos de branding e design editorial.' },
+        { cargo: 'Designer Gráfica', empresa: 'Estúdio Visual, Luanda', inicio: '2017', fim: '2020', descricao: 'Criação de materiais gráficos para redes sociais, embalagens e campanhas publicitárias. Colaboração direta com clientes para desenvolvimento de conceitos criativos.' },
+        { cargo: 'Designer Júnior', empresa: 'Gráfica Central, Luanda', inicio: '2015', fim: '2017', descricao: 'Produção de arte-final, tratamento de imagem e diagramação de materiais institucionais. Suporte à equipa de criação em campanhas de média dimensão.' }
+      ],
+      formacoes: [
+        { curso: 'Licenciatura em Design de Comunicação', instituicao: 'Universidade Agostinho Neto', inicio: '2011', fim: '2015' },
+        { curso: 'Curso Avançado de Branding', instituicao: 'Escola de Design de Lisboa', inicio: '2019', fim: '2020' }
+      ],
+      competencias: [
+        { nome: 'Adobe Illustrator', nivel: '5' },
+        { nome: 'Adobe Photoshop', nivel: '5' },
+        { nome: 'Figma', nivel: '4' },
+        { nome: 'Adobe InDesign', nivel: '4' },
+        { nome: 'After Effects', nivel: '3' }
+      ],
+      idiomas: [
+        { idioma: 'Português', nivel: 'Nativo' },
+        { idioma: 'Inglês', nivel: 'Avançado' },
+        { idioma: 'Francês', nivel: 'Intermediário' }
+      ]
+    };
+  }
+
+  window.prosseguirCriarCV = function (usarPerfil) {
+    sessionStorage.setItem('tf_usar_perfil', usarPerfil ? 'true' : 'false');
+    Router.go('escolher-modelo-cv');
+  };
+
   window.criarCVComModelo = function (modelId) {
-    var profile = Storage.getProfile();
-    var docId = Storage.createDoc('cv', 'CV ' + (profile.cargo || 'Profissional'), modelId);
-    // Save profile data as document data
-    Storage.saveDocData(docId, JSON.parse(JSON.stringify(profile)));
+    var usarPerfil = sessionStorage.getItem('tf_usar_perfil') === 'true';
+    var data = {};
+    if (usarPerfil) {
+      data = JSON.parse(JSON.stringify(Storage.getProfile()));
+    }
+    var nomeDoc = (data.cargo || 'Profissional');
+    if (data.nome) nomeDoc = 'CV ' + data.nome.split(' ')[0];
+    var docId = Storage.createDoc('cv', nomeDoc, modelId);
+    Storage.saveDocData(docId, data);
+    sessionStorage.removeItem('tf_usar_perfil');
     Router.go('editar-doc?id=' + docId);
   };
 
-  /* ─── CRIAR DOCUMENTO ─── */
+  /* ─── OUTROS DOCUMENTOS ─── */
 
-  window.iniciarCriarDoc = function () {
-    Router.go('selecionar-doc');
-  };
-
-  Router.register('selecionar-doc', {
-    title: 'Que Documento?',
+  Router.register('outros-documentos', {
+    title: 'Outros Documentos',
     render: function () {
       return '<div class="page">' +
-        '<h1>Que documento deseja criar?</h1>' +
-        '<p class="subtitle">Escolha o tipo de documento.</p>' +
+        '<h1>Outros Documentos</h1>' +
+        '<p class="subtitle">Que documento precisas de deixar feito?</p>' +
         '<div class="card-grid">' +
           DocTypes.tipos.map(function (t) {
-            return '<div class="card" onclick="criarDocTipo(\'' + t.id + '\')" style="animation-delay:' + (0.1 + DocTypes.tipos.indexOf(t) * 0.05) + 's">' +
+            return '<div class="card" onclick="Router.go(\'wizard-doc?tipo=' + t.id + '\')" style="animation-delay:' + (0.1 + DocTypes.tipos.indexOf(t) * 0.05) + 's">' +
               '<div class="card-icon" style="font-size:28px">' + t.icon + '</div>' +
               '<h3>' + esc(t.name) + '</h3>' +
               '<p>' + esc(t.desc) + '</p>' +
@@ -741,12 +833,56 @@
     }
   });
 
-  window.criarDocTipo = function (tipoId) {
-    var info = DocTypes.get(tipoId);
-    var docId = Storage.createDoc('doc', info ? info.name : 'Documento');
-    Storage.updateDoc(docId, { docType: tipoId });
-    Storage.saveDocData(docId, {});
-    Router.go('editar-doc?id=' + docId + '&tipo=' + tipoId);
+  /* ─── WIZARD CV: QUERO AJUDA ─── */
+
+  Router.register('wizard-cv', {
+    title: 'Assistente CV',
+    render: function () {
+      return '<div class="page">' +
+        '<h1>Assistente de Criação</h1>' +
+        '<p class="subtitle">Responde às perguntas abaixo para gerarmos o teu CV.</p>' +
+        '<div id="wizard-cv-container">' +
+          renderWizardPerguntasCV() +
+        '</div>' +
+      '</div>';
+    }
+  });
+
+  function renderWizardPerguntasCV() {
+    var perguntas = [
+      { campo: 'nome', label: 'Nome completo', tipo: 'text' },
+      { campo: 'cargo', label: 'Qual é o teu cargo ou área de atuação?', tipo: 'text' },
+      { campo: 'resumoProfissional', label: 'Fala um pouco sobre ti profissionalmente', tipo: 'textarea' },
+      { campo: 'objetivo', label: 'Qual é o teu objetivo profissional?', tipo: 'text' },
+      { campo: 'diferenciais', label: 'O que te diferencia dos outros candidatos?', tipo: 'textarea' }
+    ];
+    return '<div class="wizard-perguntas">' +
+      perguntas.map(function (p, i) {
+        return '<div class="form-group">' +
+          '<label for="wcv-' + i + '">' + esc(p.label) + '</label>' +
+          (p.tipo === 'textarea'
+            ? '<textarea id="wcv-' + i + '" class="wizard-cv-input" rows="3" placeholder="Escreve aqui..."></textarea>'
+            : '<input type="text" id="wcv-' + i + '" class="wizard-cv-input" placeholder="Escreve aqui...">') +
+        '</div>';
+      }).join('') +
+      '<button class="btn-primary" onclick="gerarCVdaWizard()" style="margin-top:16px">Gerar Currículo</button>' +
+    '</div>';
+  }
+
+  window.gerarCVdaWizard = function () {
+    var campos = ['nome', 'cargo', 'resumoProfissional', 'objetivo', 'diferenciais'];
+    var data = {};
+    campos.forEach(function (c, i) {
+      var el = document.getElementById('wcv-' + i);
+      if (el) data[c] = el.value;
+    });
+    if (!data.nome || !data.cargo) {
+      alert('Preenche pelo menos o nome e o cargo.');
+      return;
+    }
+    var docId = Storage.createDoc('cv', 'CV ' + data.nome.split(' ')[0], 'classico');
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
   };
 
   /* ─── EDITAR DOCUMENTO ─── */
@@ -1371,21 +1507,20 @@
     render: function () {
       var plans = CONFIG.plans;
       var banks = CONFIG.banks;
-      var currentPlan = localStorage.getItem('tf_plan') || 'free';
+      var currentPlan = localStorage.getItem('tf_plan') || 'avulso';
 
       var planCards = Object.keys(plans).map(function (key) {
         var p = plans[key];
         var isCurrent = currentPlan === key;
-        var isFree = key === 'free';
         var price = p.price || 0;
-        return '<div class="plan-card' + (isCurrent ? ' selected' : '') + (isFree ? ' free' : '') + '" onclick="selecionarPlano(\'' + key + '\')">' +
+        return '<div class="plan-card' + (isCurrent ? ' selected' : '') + '" onclick="selecionarPlano(\'' + key + '\')">' +
           '<div class="plan-card-header">' +
             '<h3>' + esc(p.name) + '</h3>' +
-            '<span class="plan-price">' + (price > 0 ? price + ' Kz' : 'Grátis') + '</span>' +
+            '<span class="plan-price">' + price + ' Kz</span>' +
           '</div>' +
           '<div class="plan-docs">' + (p.docs >= 100 ? 'Documentos ilimitados' : 'Até ' + p.docs + ' documentos') + '</div>' +
-          (isCurrent && currentPlan !== 'free' ? '<span class="plan-badge">Plano atual</span>' : '') +
-          (isFree ? '<span class="plan-badge">' + (currentPlan === 'free' ? 'Plano atual' : 'Gratuito') + '</span>' : '') +
+          (p.desc ? '<div class="plan-desc">' + esc(p.desc) + '</div>' : '') +
+          (isCurrent ? '<span class="plan-badge">Plano atual</span>' : '') +
         '</div>';
       }).join('');
 
@@ -1490,7 +1625,6 @@
   Router.register('definicoes', {
     title: 'Definições',
     render: function () {
-      var endpoint = localStorage.getItem('chave_ai_endpoint') || '';
       var currentTheme = getTheme();
       var themeOpts = [
         { id: 'light', label: 'Claro' },
@@ -1512,26 +1646,12 @@
             '<div class="theme-options">' + themeHTML + '</div>' +
           '</div>' +
         '</div>' +
-        '<div class="settings-section"><h2>IA — Melhoria de Texto</h2>' +
-          '<div class="settings-card"><h3>Endpoint de IA</h3><p>Conecta o Tá Feito a um Cloudflare Worker para melhorar descrições. Sem endpoint, o modo offline é usado.</p>' +
-            '<div class="form-group" style="margin-bottom:8px"><input type="url" id="ai-endpoint" value="' + esc(endpoint) + '" placeholder="https://teu-worker.workers.dev"></div>' +
-            '<button class="btn-primary" onclick="guardarEndpoint()" style="width:auto">Guardar</button>' +
-            (!endpoint ? '<div class="settings-status info"><span>💡</span> Modo offline ativo</div>' : '<div class="settings-status success"><span>✓</span> Endpoint configurado</div>') +
-          '</div>' +
-        '</div>' +
         '<div class="settings-section"><h2>Sobre</h2>' +
-          '<div class="settings-card"><h3>' + CONFIG.brand.name + ' — ' + CONFIG.brand.tagline + '</h3><p>' + CONFIG.brand.slogan + '<br>Versão ' + CONFIG.version + '<br>Feito em Angola, para Angola.<br>Criado pela <strong>AGEA Comercial</strong>.</p></div>' +
+           '<div class="settings-card"><h3>' + CONFIG.brand.name + ' — ' + CONFIG.brand.tagline + '</h3><p>' + CONFIG.brand.slogan + '<br>Versão ' + CONFIG.version + '<br>Feito em Angola, para Angola.<br>Criado pela <strong>' + CONFIG.brand.company + '</strong>.</p></div>' +
         '</div>' +
       '</div>';
     }
   });
-
-  window.guardarEndpoint = function () {
-    var url = document.getElementById('ai-endpoint')?.value || '';
-    if (url && AI) AI.setEndpoint(url);
-    else localStorage.setItem('chave_ai_endpoint', url);
-    Router.go('definicoes');
-  };
 
   /* ─── HELPER: PLANOS, BANCOS, WHATSAPP ─── */
 
@@ -1647,19 +1767,51 @@
     setTimeout(function () { Router.go('planos'); }, 1500);
   };
 
+  /* ─── 5-CLICK ADMIN ACCESS ─── */
+
+  var _logoClickCount = 0;
+  var _logoClickTimer = null;
+
+  window.handleLogoClick = function (e) {
+    _logoClickCount++;
+    if (_logoClickTimer) clearTimeout(_logoClickTimer);
+    if (_logoClickCount >= 5) {
+      _logoClickCount = 0;
+      Router.go('admin');
+      return;
+    }
+    _logoClickTimer = setTimeout(function () { _logoClickCount = 0; }, 2000);
+  };
+
   /* ─── ADMIN FUNCTIONS ─── */
 
-  window.adminLogin = function () {
+  window.adminLogin = async function () {
     var pin = document.getElementById('admin-pin-input');
     var errorEl = document.getElementById('admin-login-error');
+    var btn = document.querySelector('.admin-login .btn-primary');
     if (!pin || !errorEl) return;
     var pinVal = pin.value.trim();
-    if (pinVal === CONFIG.admin.localPin) {
-      sessionStorage.setItem('tf_admin_auth', 'true');
-      Router.go('admin');
-    } else {
-      errorEl.textContent = 'PIN incorreto. Tenta novamente.';
+    if (!pinVal) { errorEl.textContent = 'Insere o PIN.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'A verificar...';
+    try {
+      var resp = await fetch('/api/admin-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pinVal })
+      });
+      var data = await resp.json();
+      if (data.ok) {
+        sessionStorage.setItem('tf_admin_auth', 'true');
+        Router.go('admin');
+      } else {
+        errorEl.textContent = 'PIN incorreto ou administração indisponível.';
+      }
+    } catch (e) {
+      errorEl.textContent = 'Erro de conexão. Verifica se o servidor está ativo.';
     }
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
   };
 
   window.adminLogout = function () {
@@ -1669,11 +1821,10 @@
 
   window.gerarCodigoAdmin = function () {
     var planKeys = Object.keys(CONFIG.plans);
-    var nonFree = planKeys.filter(function (k) { return k !== 'free'; });
-    var selectedPlan = prompt('Plano para o código? (' + nonFree.join(', ') + ')', 'basico');
+    var selectedPlan = prompt('Plano para o código? (' + planKeys.join(', ') + ')', 'avulso');
     if (!selectedPlan) return;
     if (!CONFIG.plans[selectedPlan]) {
-      alert('Plano inválido. Usa: ' + nonFree.join(', '));
+      alert('Plano inválido. Usa: ' + planKeys.join(', '));
       return;
     }
     var prefix = CONFIG.activation.prefix || 'TF-';
@@ -1760,10 +1911,42 @@
     });
   };
 
+  /* ─── PWA INSTALL ─── */
+  var deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    mostrarBotaoInstalar();
+  });
+
+  function mostrarBotaoInstalar() {
+    var target = document.getElementById('save-status');
+    if (!target || !deferredPrompt) return;
+    target.innerHTML = '<button class="btn-install-pwa" onclick="instalarPWA()">📲 Instalar Tá Feito</button>';
+  }
+
+  window.instalarPWA = function () {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function (result) {
+      deferredPrompt = null;
+      var target = document.getElementById('save-status');
+      if (target) target.innerHTML = '';
+    });
+  };
+
+  window.addEventListener('appinstalled', function () {
+    deferredPrompt = null;
+    var target = document.getElementById('save-status');
+    if (target) target.innerHTML = '<span style="color:var(--tf-accent);font-size:12px">✓ Instalado</span>';
+  });
+
   /* ─── START ─── */
 
   injectLogo();
   initTheme();
+  startMascotBlink();
 
   Router.go('home');
 
