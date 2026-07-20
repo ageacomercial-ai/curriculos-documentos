@@ -2,7 +2,7 @@
   "name": "Tá Feito — Documentos Profissionais",
   "short_name": "Tá Feito",
   "description": "Cria currículos, declarações, cartas e documentos profissionais com modelos premium",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#111120",
   "theme_color": "#1a1a2e",

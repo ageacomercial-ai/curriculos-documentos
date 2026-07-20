@@ -186,6 +186,9 @@
           '</div>' +
         '</div>' +
       '</div>';
+    },
+    onRender: function () {
+      startMascotBlink();
     }
   });
 
@@ -713,7 +716,8 @@
     render: function () {
       var modelos = ModelRegistry.list('cv');
       var profile = Storage.getProfile();
-      if (profile.nome) {
+      var jaRespondido = sessionStorage.getItem('tf_usar_perfil') !== null;
+      if (profile.nome && !jaRespondido) {
         return '<div class="page">' +
           '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
           '<h1>Usar dados do perfil?</h1>' +
@@ -754,7 +758,7 @@
           }
           return '<div class="model-preview-card" onclick="criarCVComModelo(\'' + m.id + '\')">' +
             '<div class="model-preview-thumb">' +
-              '<div class="model-preview-cv">' + html + '</div>' +
+              '<div class="model-preview-cv" style="transform:scale(0.22)">' + html + '</div>' +
             '</div>' +
             '<div class="model-preview-label">' + esc(m.name) + '</div>' +
           '</div>';
@@ -857,22 +861,82 @@
     var perguntas = [
       { campo: 'nome', label: 'Nome completo', tipo: 'text' },
       { campo: 'cargo', label: 'Qual é o teu cargo ou área de atuação?', tipo: 'text' },
-      { campo: 'resumoProfissional', label: 'Fala um pouco sobre ti profissionalmente', tipo: 'textarea' },
+      { campo: 'resumoProfissional', label: 'Fala um pouco sobre ti profissionalmente', tipo: 'textarea', melhoria: true },
       { campo: 'objetivo', label: 'Qual é o teu objetivo profissional?', tipo: 'text' },
-      { campo: 'diferenciais', label: 'O que te diferencia dos outros candidatos?', tipo: 'textarea' }
+      { campo: 'diferenciais', label: 'O que te diferencia dos outros candidatos?', tipo: 'textarea', melhoria: true }
     ];
     return '<div class="wizard-perguntas">' +
       perguntas.map(function (p, i) {
-        return '<div class="form-group">' +
+        var html = '<div class="form-group">' +
           '<label for="wcv-' + i + '">' + esc(p.label) + '</label>' +
           (p.tipo === 'textarea'
             ? '<textarea id="wcv-' + i + '" class="wizard-cv-input" rows="3" placeholder="Escreve aqui..."></textarea>'
-            : '<input type="text" id="wcv-' + i + '" class="wizard-cv-input" placeholder="Escreve aqui...">') +
-        '</div>';
+            : '<input type="text" id="wcv-' + i + '" class="wizard-cv-input" placeholder="Escreve aqui...">');
+        if (p.melhoria) {
+          html += '<button class="btn-melhorar" onclick="melhorarTextoWizard(' + i + ')" type="button">✨ Melhorar com IA</button>' +
+            '<div id="wcv-melhoria-' + i + '" class="melhoria-container"></div>';
+        }
+        html += '</div>';
+        return html;
       }).join('') +
       '<button class="btn-primary" onclick="gerarCVdaWizard()" style="margin-top:16px">Gerar Currículo</button>' +
     '</div>';
   }
+
+  window.melhorarTextoWizard = function (index) {
+    var input = document.getElementById('wcv-' + index);
+    var container = document.getElementById('wcv-melhoria-' + index);
+    if (!input || !container) return;
+    var text = input.value.trim();
+    if (text.length < 3) {
+      container.innerHTML = '<div class="melhoria-error">Escreve primeiro uma descrição para melhorar.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="melhoria-loading">A melhorar texto...</div>';
+    AI.enhanceText(text, 'profissional').then(function (enhanced) {
+      if (!enhanced || enhanced === text) {
+        container.innerHTML = '<div class="melhoria-error">Não foi possível melhorar. Tenta reformular.</div>';
+        return;
+      }
+      container.innerHTML =
+        '<div class="melhoria-sugestao">' +
+          '<div class="melhoria-original"><strong>Original:</strong><p>' + esc(text) + '</p></div>' +
+          '<div class="melhoria-resultado"><strong>Sugestão:</strong><p>' + esc(enhanced) + '</p></div>' +
+          '<div class="melhoria-acoes">' +
+            '<button class="btn-sm btn-aceitar" onclick="aceitarMelhoria(' + index + ')">✓ Aceitar</button>' +
+            '<button class="btn-sm btn-recusar" onclick="recusarMelhoria(' + index + ')">✗ Rejeitar</button>' +
+            '<button class="btn-sm btn-editar" onclick="editarMelhoria(' + index + ')">✎ Editar</button>' +
+          '</div>' +
+        '</div>';
+      container._enhancedText = enhanced;
+    }).catch(function (err) {
+      container.innerHTML = '<div class="melhoria-error">' + esc(err.message) + '</div>';
+    });
+  };
+
+  window.aceitarMelhoria = function (index) {
+    var container = document.getElementById('wcv-melhoria-' + index);
+    var input = document.getElementById('wcv-' + index);
+    if (container && container._enhancedText && input) {
+      input.value = container._enhancedText;
+      container.innerHTML = '<div class="melhoria-sucesso">Texto actualizado com a sugestão ✓</div>';
+    }
+  };
+
+  window.recusarMelhoria = function (index) {
+    var container = document.getElementById('wcv-melhoria-' + index);
+    if (container) container.innerHTML = '';
+  };
+
+  window.editarMelhoria = function (index) {
+    var container = document.getElementById('wcv-melhoria-' + index);
+    var input = document.getElementById('wcv-' + index);
+    if (container && container._enhancedText && input) {
+      input.value = container._enhancedText;
+      container.innerHTML = '<div class="melhoria-info">Texto copiado para edição. Revisa e faz ajustes.</div>';
+      input.focus();
+    }
+  };
 
   window.gerarCVdaWizard = function () {
     var campos = ['nome', 'cargo', 'resumoProfissional', 'objetivo', 'diferenciais'];
@@ -885,7 +949,12 @@
       alert('Preenche pelo menos o nome e o cargo.');
       return;
     }
-    var docId = Storage.createDoc('cv', 'CV ' + data.nome.split(' ')[0], 'classico');
+    var modelId = 'classico';
+    if (AI && AI.suggestModel) {
+      var suggestion = AI.suggestModel(data.cargo);
+      if (suggestion && suggestion.model) modelId = suggestion.model;
+    }
+    var docId = Storage.createDoc('cv', 'CV ' + data.nome.split(' ')[0], modelId);
     Storage.saveDocData(docId, data);
     Router.go('editar-doc?id=' + docId);
   };
@@ -1643,37 +1712,75 @@
       if (!autenticado) {
         return '<div class="page"><div class="admin-login">' +
           '<h2>🔐 Área Administrativa</h2>' +
-          '<p style="font-size:13px;color:var(--tf-text-secondary);margin-bottom:16px">Insere o PIN de administrador</p>' +
-          '<input type="password" id="admin-pin-input" placeholder="PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*">' +
+          '<p style="font-size:13px;color:var(--tf-text-secondary);margin-bottom:16px">Insere o PIN de administrador para acederes ao painel.</p>' +
+          '<input type="password" id="admin-pin-input" placeholder="PIN" maxlength="20">' +
           '<button class="btn-primary" onclick="adminLogin()" style="width:100%">Entrar</button>' +
           '<div id="admin-login-error" style="margin-top:10px;font-size:13px;color:#e74c3c"></div>' +
         '</div></div>';
       }
 
-      // Admin panel
+      // Gather data
       var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
       var docCount = Storage.listDocs().length;
-      var profileCount = JSON.parse(localStorage.getItem('chave_profiles') || '[]').length || '0';
+      var plans = CONFIG.plans;
 
+      // Plans section
+      var plansHTML = Object.keys(plans).map(function (key) {
+        var p = plans[key];
+        var codeCount = codes.filter(function (c) { return c.plan === key; }).length;
+        return '<div class="admin-plan-item">' +
+          '<div class="admin-plan-info">' +
+            '<strong>' + esc(p.name) + '</strong>' +
+            '<span class="admin-plan-price">' + p.price + ' Kz</span>' +
+          '</div>' +
+          '<div class="admin-plan-meta">' +
+            '<span>' + (p.docs >= 100 ? 'Ilimitado' : p.docs + ' docs') + '</span>' +
+            '<span>' + codeCount + ' códigos</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      // Codes section
       var codesHTML = codes.length === 0
         ? '<p style="color:var(--tf-text-muted);font-size:13px">Nenhum código gerado ainda.</p>'
         : '<div class="admin-codes">' + codes.slice().reverse().map(function (c) {
+            var expirado = c.expiresAt && Date.now() > new Date(c.expiresAt).getTime();
+            var statusLabel = c.status === 'active' ? (expirado ? 'Expirado' : 'Disponível') : c.status;
+            var statusClass = c.status === 'used' ? 'used' : (expirado ? 'expired' : 'active');
+            var criado = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-PT') : '—';
+            var expira = c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('pt-PT') : '—';
             return '<div class="admin-code-item">' +
-              '<span class="code-value">' + esc(c.code) + '</span>' +
-              '<span>' + (c.plan ? esc(c.plan) : '') + '</span>' +
-              '<span class="code-status ' + c.status + '">' + c.status + '</span>' +
+              '<div class="admin-code-row">' +
+                '<span class="code-value">' + esc(c.code) + '</span>' +
+                '<button class="btn-copy-code" onclick="copiarTexto(\'' + esc(c.code) + '\', this)" title="Copiar código">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+                  '<span>Copiar</span>' +
+                '</button>' +
+              '</div>' +
+              '<div class="admin-code-meta">' +
+                '<span>Plano: <strong>' + esc(c.plan || '—') + '</strong></span>' +
+                '<span>Criado: ' + criado + '</span>' +
+                '<span>Expira: ' + expira + '</span>' +
+              '</div>' +
+              '<span class="code-status ' + statusClass + '">' + statusLabel + '</span>' +
             '</div>';
           }).join('') + '</div>';
 
       return '<div class="page"><div class="admin-panel">' +
         '<h2>🔐 Administração</h2>' +
-        '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">' +
-          '<div style="flex:1;min-width:120px;padding:14px;background:var(--tf-bg-card);border-radius:var(--tf-radius);border:1px solid var(--tf-border-color)"><div style="font-size:22px;font-weight:700;color:var(--tf-accent)">' + docCount + '</div><div style="font-size:12px;color:var(--tf-text-muted)">Documentos</div></div>' +
-          '<div style="flex:1;min-width:120px;padding:14px;background:var(--tf-bg-card);border-radius:var(--tf-radius);border:1px solid var(--tf-border-color)"><div style="font-size:22px;font-weight:700;color:var(--tf-accent)">' + codes.length + '</div><div style="font-size:12px;color:var(--tf-text-muted)">Códigos</div></div>' +
+        '<div class="admin-stats">' +
+          '<div class="admin-stat"><div class="admin-stat-num">' + docCount + '</div><div class="admin-stat-label">Documentos</div></div>' +
+          '<div class="admin-stat"><div class="admin-stat-num">' + codes.length + '</div><div class="admin-stat-label">Códigos</div></div>' +
         '</div>' +
-        '<button class="btn-primary" onclick="gerarCodigoAdmin()" style="margin-bottom:16px;width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Gerar novo código</button>' +
-        '<h3 style="font-size:16px;font-weight:600;margin-bottom:10px;color:var(--tf-text-primary)">Códigos de Ativação</h3>' +
-        codesHTML +
+        '<div class="admin-section">' +
+          '<h3>Planos</h3>' +
+          '<div class="admin-plans">' + plansHTML + '</div>' +
+        '</div>' +
+        '<div class="admin-section">' +
+          '<h3>Códigos de Ativação</h3>' +
+          '<button class="btn-primary" onclick="gerarCodigoAdmin()" style="margin-bottom:16px;width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Gerar novo código</button>' +
+          codesHTML +
+        '</div>' +
         '<button class="btn-secondary" onclick="adminLogout()" style="margin-top:20px;width:100%">Sair do Admin</button>' +
       '</div></div>';
     }
@@ -1903,27 +2010,69 @@
       alert('Plano inválido. Usa: ' + planKeys.join(', '));
       return;
     }
-    var prefix = CONFIG.activation.prefix || 'TF-';
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    var code = prefix;
-    for (var i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    function gerarGrupo(tamanho) {
+      var g = '';
+      for (var i = 0; i < tamanho; i++) {
+        g += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return g;
     }
+    // Formato: TF-7K4M-92QX-PL8R (14 caracteres alfanuméricos + separadores)
+    var code = 'TF-' + gerarGrupo(4) + '-' + gerarGrupo(4) + '-' + gerarGrupo(4);
     var expiryHours = CONFIG.activation.expiryHours || 48;
     var expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
     var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
+    // Verificar unicidade
+    while (codes.some(function (c) { return c.code === code; })) {
+      code = 'TF-' + gerarGrupo(4) + '-' + gerarGrupo(4) + '-' + gerarGrupo(4);
+    }
     codes.push({
       code: code,
       plan: selectedPlan,
       status: 'active',
       createdAt: new Date().toISOString(),
-      expiresAt: expiresAt,
-      createdBy: 'admin'
+      expiresAt: expiresAt
     });
     localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
-    alert('Código gerado: ' + code + '\nExpira em: ' + new Date(expiresAt).toLocaleString('pt-PT') + '\n' + expiryHours + 'h de validade.');
     Router.go('admin');
   };
+
+  window.copiarTexto = function (texto, btnEl) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        btnEl.classList.add('copied');
+        var span = btnEl.querySelector('span');
+        if (span) span.textContent = 'Copiado';
+        setTimeout(function () {
+          btnEl.classList.remove('copied');
+          if (span) span.textContent = 'Copiar';
+        }, 2000);
+      }).catch(function () { fallbackCopiarTexto(texto, btnEl); });
+    } else {
+      fallbackCopiarTexto(texto, btnEl);
+    }
+  };
+
+  function fallbackCopiarTexto(texto, btnEl) {
+    var ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      btnEl.classList.add('copied');
+      var span = btnEl.querySelector('span');
+      if (span) span.textContent = 'Copiado';
+      setTimeout(function () {
+        btnEl.classList.remove('copied');
+        if (span) span.textContent = 'Copiar';
+      }, 2000);
+    } catch (e) {}
+    document.body.removeChild(ta);
+  }
 
   /* ─── PREVIEW SCALING ─── */
 

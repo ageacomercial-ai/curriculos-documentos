@@ -1,5 +1,5 @@
 (function () {
-  const PRICE_PER_DOC = 500;
+  var PRICE_PER_DOC = (window.CONFIG && CONFIG.perDocPrice) || 1000;
   const PAYMENT_REF_PREFIX = '242';
 
   function generateReference() {

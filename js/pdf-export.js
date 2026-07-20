@@ -16,7 +16,6 @@
 
   async function exportToPDF(element, filename, options) {
     options = options || {};
-    const scale = options.scale || 2;
     const watermark = options.watermark !== false;
 
     if (!element) {
@@ -24,8 +23,9 @@
     }
 
     try {
+      const captureScale = 1.5;
       const canvas = await html2canvas(element, {
-        scale: scale,
+        scale: captureScale,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
@@ -34,27 +34,31 @@
         height: element.scrollHeight
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const imgWidth = 210;
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const A4_W = 210;
+      const A4_H = 297;
+      const imgWidth = A4_W;
       const imgHeight = (canvas.height / canvas.width) * imgWidth;
+
+      // Escalar para caber numa única página A4 se necessário
+      const finalHeight = Math.min(imgHeight, A4_H);
+      const finalWidth = imgWidth;
+      // Se o conteúdo é mais alto que A4, escala proporcionalmente
+      const fitScale = imgHeight > A4_H ? A4_H / imgHeight : 1;
 
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageHeight = 297;
-      let heightLeft = imgHeight;
-      let position = 0;
 
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      if (fitScale < 1) {
+        // Centralizar verticalmente o conteúdo escalado
+        const scaledH = imgHeight * fitScale;
+        const yOffset = (A4_H - scaledH) / 2;
+        pdf.addImage(imgData, 'JPEG', 0, yOffset, imgWidth * fitScale, scaledH);
+      } else {
+        pdf.addImage(imgData, 'JPEG', 0, 0, finalWidth, Math.min(imgHeight, A4_H));
       }
 
-      if (watermark && !Storage.isPaid()) {
+      if (watermark && !window.Storage?.isPaid?.()) {
         pdf.setFontSize(7);
         pdf.setTextColor(200, 200, 200);
         for (let y = 50; y < 280; y += 60) {
@@ -66,7 +70,7 @@
       }
 
       pdf.save(filename || 'documento.pdf');
-      incrementExportCount();
+      if (window.incrementExportCount) window.incrementExportCount();
       return true;
     } catch (err) {
       console.error('Erro na exportação PDF:', err);
