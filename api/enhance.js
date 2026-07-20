@@ -4,6 +4,7 @@
 const ALLOWED_ORIGINS = [
   'https://ageacomercial-ai.github.io',
   'https://ta-feito-documentos.vercel.app',
+  'https://ta-feito-doc.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'file://'

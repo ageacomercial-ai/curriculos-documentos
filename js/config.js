@@ -126,7 +126,7 @@ const CONFIG = {
 
   // ─── REDES SOCIAIS ───
   social: {
-    website: 'https://ta-feito-documentos.vercel.app',
+    website: 'https://ta-feito-doc.vercel.app',
     github: 'https://github.com/ageacomercial-ai/curriculos-documentos',
     whatsapp: 'https://wa.me/244937876711'
   },
