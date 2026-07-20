@@ -1737,16 +1737,14 @@
     }
   });
 
-  /* ─── START ─── */
-
-  injectLogo();
-  initTheme();
-
-  Router.go('home');
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(function () {});
-  }
+  /* ─── GLOBAL MASCOT HELPER ─── */
+  window.renderMascot = function (size, cls) {
+    size = size || 48;
+    cls = cls || '';
+    return '<div class="tf-mascot tf-mascot-' + (size <= 32 ? 'sm' : size <= 48 ? 'md' : size <= 72 ? 'lg' : 'xl') + ' ' + cls + '">' +
+      mascotSVG(size, 'smile') +
+    '</div>';
+  };
 
   /* ─── ROUTE HOOK: update document title ─── */
   var origGo = Router.go;
@@ -1759,13 +1757,15 @@
     }
   };
 
-  /* ─── GLOBAL MASCOT HELPER ─── */
-  window.renderMascot = function (size, cls) {
-    size = size || 48;
-    cls = cls || '';
-    return '<div class="tf-mascot tf-mascot-' + (size <= 32 ? 'sm' : size <= 48 ? 'md' : size <= 72 ? 'lg' : 'xl') + ' ' + cls + '">' +
-      mascotSVG(size, 'smile') +
-    '</div>';
-  };
+  /* ─── START ─── */
+
+  injectLogo();
+  initTheme();
+
+  Router.go('home');
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
 
 })();
