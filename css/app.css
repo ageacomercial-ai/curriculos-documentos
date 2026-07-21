@@ -1335,14 +1335,10 @@
     align-items: start;
   }
 
-  .split-layout .split-form {
-    position: sticky;
-    top: 0;
-  }
-
   .split-layout .split-preview {
     position: sticky;
-    top: 0;
+    top: calc(var(--header-h, 56px) + 24px);
+    align-self: start;
   }
 }
 

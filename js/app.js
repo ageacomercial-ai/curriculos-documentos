@@ -2148,8 +2148,18 @@
 
     var wrapWidth = wrap.clientWidth - 32;
     if (wrapWidth <= 0) return;
+    // A4 at 96dpi: 210mm ≈ 794px, 297mm ≈ 1123px
+    var mmToPx = 3.7795;
     var modeloWidth = 210;
-    var scale = Math.min(1, wrapWidth / modeloWidth);
+    var widthScale = Math.min(1, wrapWidth / (modeloWidth * mmToPx));
+
+    // Available height for preview (viewport minus header minus padding)
+    var viewH = window.innerHeight || document.documentElement.clientHeight;
+    var availH = viewH - 56 - 60;
+    var modeloHeight = 297;
+    var heightScale = Math.min(1, availH / (modeloHeight * mmToPx));
+
+    var scale = Math.min(widthScale, heightScale, 1);
 
     if (scale < 1) {
       modelo.style.transform = 'scale(' + scale + ')';
