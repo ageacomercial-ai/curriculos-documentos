@@ -883,42 +883,41 @@
 /* ─── Forms ─── */
 
 .form-section {
-  margin-bottom: 24px;
-  animation: sectionEnter 0.3s ease both;
-}
-@keyframes sectionEnter {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  margin-bottom: 28px;
+  background: var(--tf-bg-surface, transparent);
+  border-radius: var(--tf-radius, 12px);
+  padding: 20px 0;
 }
 
 .form-section h2 {
   font-family: var(--font-serif);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--navy);
-  margin-bottom: 14px;
-  padding-bottom: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
   border-bottom: 2px solid var(--gold);
   display: inline-block;
+  letter-spacing: 0.3px;
 }
 
-.form-group { margin-bottom: 14px; }
+.form-group { margin-bottom: 16px; }
 
 .form-group label {
   display: block;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-light);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 11px 14px;
+  padding: 12px 14px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
@@ -928,6 +927,7 @@
   transition: all 0.2s;
   outline: none;
   -webkit-appearance: none;
+  box-sizing: border-box;
 }
 
 [data-theme="dark"] .form-group input,
@@ -940,25 +940,25 @@
 .form-group input:focus,
 .form-group textarea:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 4px rgba(201,169,110,0.1);
+  box-shadow: 0 0 0 3px rgba(201,169,110,0.12);
 }
 
 .form-group textarea {
   min-height: 80px;
   resize: vertical;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .form-actions {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }

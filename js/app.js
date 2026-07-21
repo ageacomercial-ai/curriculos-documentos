@@ -1684,6 +1684,14 @@
         window['_' + prefix + 'fotoDataUrl'] = dataUrl;
         var wrap = document.getElementById(wrapId);
         if (wrap) wrap.innerHTML = '<img src="' + esc(dataUrl) + '" alt="" class="photo-preview">';
+        // Auto-save and update preview if in editor
+        if (prefix === 'edit-') {
+          var docInput = document.querySelector('#edit-input-foto');
+          if (docInput) {
+            var docId = docInput.getAttribute('data-doc');
+            if (docId) { autosaveDoc(docId); atualizarPreviewDoc(docId); }
+          }
+        }
       };
       img.src = ev.target.result;
     };
