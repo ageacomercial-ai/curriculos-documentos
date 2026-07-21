@@ -54,22 +54,24 @@
     var lines = text.split(/[.!?\n]+/).filter(Boolean).map(function (l) { return l.trim(); });
     if (lines.length === 0) lines = [text];
 
-    var actionVerbs = {
-      profissional: ['Liderei', 'Coordenei', 'Implementei', 'Desenvolvi', 'Optimizei', 'Gerenciei', 'Estruturei', 'Negociei', 'Analisei', 'Supervisionei'],
-      conciso: ['Liderei', 'Criei', 'Gerenciei', 'Optimizei', 'Analisei', 'Coordenei']
-    };
-
-    var verbs = actionVerbs[style] || actionVerbs.profissional;
-
-    var results = lines.map(function (line, i) {
-      var verb = verbs[i % verbs.length];
-      line = line.replace(/^(sou|era|fui|trabalhei como|responsável por|era responsável por)\s+/i, '');
-      line = line.charAt(0).toLowerCase() + line.slice(1);
-      if (!line.endsWith('.')) line += '.';
-      return verb + ' ' + line;
+    var results = lines.map(function (line) {
+      line = line.trim();
+      if (!line) return '';
+      line = line.charAt(0).toUpperCase() + line.slice(1);
+      if (!line.endsWith('.') && !line.endsWith('!') && !line.endsWith('?')) line += '.';
+      line = line.replace(/\bvc\b/gi, 'você');
+      line = line.replace(/\btb\b/gi, 'também');
+      line = line.replace(/\bpq\b/gi, 'porque');
+      line = line.replace(/\bq\b/gi, 'que');
+      line = line.replace(/\bnej\b/gi, 'ninguém');
+      line = line.replace(/\btd\b/gi, 'tudo');
+      line = line.replace(/\bng\b/gi, 'não');
+      line = line.replace(/\bflr\b/gi, 'falar');
+      line = line.replace(/\bblz\b/gi, 'beleza');
+      return line;
     });
 
-    return results.join('\n');
+    return results.join(' ');
   }
 
   function suggestModel(cargo) {

@@ -17,13 +17,13 @@ function isAllowed(origin, referer) {
 
 function buildPrompt(text, style) {
   const styleMap = {
-    profissional: 'profissional, com verbos de acção e tom formal',
-    conciso: 'conciso, directo, em 1 linha',
-    formal: 'formal, com linguagem jurídica/administrativa',
-    criativo: 'criativo e dinâmico, mantendo profissionalismo'
+    profissional: 'profissional e formal',
+    conciso: 'conciso e directo',
+    formal: 'formal e administrativo',
+    criativo: 'criativo mas profissional'
   };
-  const estilo = styleMap[style] || styleMap.profissional;
-  return `Melhora o texto seguinte para um tom ${estilo} em português de Angola (pt-AO). Mantém o significado original. Apenas devolve o texto melhorado, sem explicações.\n\nTexto original: "${text}"\n\nTexto melhorado:`;
+  const estilo = styleMap[style] || 'profissional';
+  return `Corrige apenas erros ortográficos, gramaticais e de vocabulário no texto abaixo, em português de Angola (pt-AO). NÃO expandas o conteúdo nem acrescentes informação nova. Apenas melhora a escrita actual. Tom: ${estilo}. Devolve APENAS o texto corrigido, sem explicações.\n\nTexto original: "${text}"\n\nTexto corrigido:`;
 }
 
 module.exports = async function handler(req, res) {
@@ -72,7 +72,7 @@ module.exports = async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'És um assistente profissional de documentos. Melhoras textos para português de Angola (pt-AO). Apenas devolves o texto melhorado, sem explicações.'
+            content: 'És um revisor de texto especializado em português de Angola (pt-AO). Corriges ortografia, gramática e vocabulário. NUNCA acrescentas informação nova nem expandes o conteúdo. Preservas o significado original. Devolves APENAS o texto corrigido.'
           },
           {
             role: 'user',
