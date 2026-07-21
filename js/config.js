@@ -17,9 +17,9 @@ const CONFIG = {
   // ─── PLANOS ───
   plans: {
     avulso: { name: 'Avulso', docs: 1, price: 1000, watermark: false, desc: 'Pagas apenas pelo documento que estás a criar agora.' },
-    basic: { name: 'Básico', docs: 20, price: 2500, watermark: false },
-    pro: { name: 'Profissional', docs: 50, price: 5000, watermark: false },
-    unlimited: { name: 'Ilimitado', docs: 100, price: 8500, watermark: false }
+    basic: { name: 'Básico', docs: 20, price: 10000, watermark: false },
+    pro: { name: 'Profissional', docs: 50, price: 18000, watermark: false },
+    unlimited: { name: 'Ilimitado', docs: 100, price: 27000, watermark: false }
   },
 
   // ─── PREÇO POR DOCUMENTO AVULSO ───
