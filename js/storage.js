@@ -72,8 +72,8 @@
         set(KEYS.DOCS, docs);
       }
     }
-    // Clean old keys
-    ['curriculo_dados', 'documento_dados', 'documento_tipo', PREFIX + 'cv', PREFIX + 'doc', PREFIX + 'doc_type'].forEach(function (k) {
+    // Clean old keys (incl. legacy payment system)
+    ['curriculo_dados', 'documento_dados', 'documento_tipo', PREFIX + 'cv', PREFIX + 'doc', PREFIX + 'doc_type', PREFIX + 'payment'].forEach(function (k) {
       try { localStorage.removeItem(k); } catch (e) {}
     });
   }
@@ -200,15 +200,11 @@
       set(KEYS.ACTIVE_DOC, doc);
     },
 
-    // ─── PAYMENT ───
+    // ─── PLAN / PAYMENT ───
 
     isPaid: function () {
-      var p = get(KEYS.PAYMENT);
-      return p && p.confirmed === true;
-    },
-
-    setPaid: function (ref) {
-      set(KEYS.PAYMENT, { ref: ref, confirmed: true, date: new Date().toISOString() });
+      var plan = localStorage.getItem('tf_plan');
+      return plan && plan.trim() !== '';
     },
 
     getPayment: function () { return get(KEYS.PAYMENT); },
