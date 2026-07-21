@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ta-feito-v1';
+const CACHE_NAME = 'ta-feito-v2';
 
 const PRECACHE_URLS = [
   './',
