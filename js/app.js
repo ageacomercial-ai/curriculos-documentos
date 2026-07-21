@@ -1576,16 +1576,78 @@
     var data = Storage.getDocData(docId) || {};
     var exp = (data.experiencias || [])[i];
     if (!exp || !exp.descricao || exp.descricao.trim().length < 3) {
-      alert('Escreva primeiro uma descrição.');
+      alert('Escreve primeiro uma descrição.');
       return;
     }
+    var textarea = document.querySelector('[data-doc="' + docId + '"][data-array="experiencias"][data-index="' + i + '"][data-key="descricao"]');
+    if (!textarea) return;
+    var container = textarea.parentElement;
+    var existing = container.querySelector('.melhoria-sugestao');
+    if (existing) existing.remove();
+    textarea.disabled = true;
+    var loading = document.createElement('div');
+    loading.className = 'melhoria-loading';
+    loading.textContent = 'A melhorar texto...';
+    container.appendChild(loading);
     try {
       var melhorado = await AI.enhanceText(exp.descricao, style);
-      exp.descricao = melhorado;
-      Storage.saveDocData(docId, data);
-      Router.go('editar-doc?id=' + docId);
+      loading.remove();
+      textarea.disabled = false;
+      if (!melhorado || melhorado === exp.descricao) {
+        var err = document.createElement('div');
+        err.className = 'melhoria-error';
+        err.textContent = 'Não foi possível melhorar. Tenta reformular.';
+        container.appendChild(err);
+        return;
+      }
+      var sug = document.createElement('div');
+      sug.className = 'melhoria-sugestao melhoria-inline';
+      sug.innerHTML =
+        '<div class="melhoria-original"><strong>Original:</strong><p>' + esc(exp.descricao) + '</p></div>' +
+        '<div class="melhoria-resultado"><strong>Sugestão:</strong><p>' + esc(melhorado) + '</p></div>' +
+        '<div class="melhoria-acoes">' +
+          '<button class="btn-sm btn-aceitar" onclick="aceitarMelhoriaExp(\'' + docId + '\',' + i + ')">✓ Aceitar</button>' +
+          '<button class="btn-sm btn-recusar" onclick="this.closest(\'.melhoria-sugestao\').remove()">✗ Rejeitar</button>' +
+          '<button class="btn-sm btn-editar" onclick="editarMelhoriaExp(\'' + docId + '\',' + i + ')">✎ Editar</button>' +
+        '</div>';
+      sug._enhancedText = melhorado;
+      container.appendChild(sug);
     } catch (err) {
-      alert(err.message || 'Erro ao melhorar');
+      loading.remove();
+      textarea.disabled = false;
+      var errorEl = document.createElement('div');
+      errorEl.className = 'melhoria-error';
+      errorEl.textContent = err.message || 'Erro ao melhorar';
+      container.appendChild(errorEl);
+    }
+  };
+
+  window.aceitarMelhoriaExp = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    var exp = (data.experiencias || [])[i];
+    if (!exp) return;
+    var textarea = document.querySelector('[data-doc="' + docId + '"][data-array="experiencias"][data-index="' + i + '"][data-key="descricao"]');
+    if (!textarea) return;
+    var sug = textarea.parentElement.querySelector('.melhoria-sugestao');
+    if (sug && sug._enhancedText) {
+      exp.descricao = sug._enhancedText;
+      textarea.value = sug._enhancedText;
+      Storage.saveDocData(docId, data);
+      sug.remove();
+    }
+  };
+
+  window.editarMelhoriaExp = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    var exp = (data.experiencias || [])[i];
+    if (!exp) return;
+    var textarea = document.querySelector('[data-doc="' + docId + '"][data-array="experiencias"][data-index="' + i + '"][data-key="descricao"]');
+    if (!textarea) return;
+    var sug = textarea.parentElement.querySelector('.melhoria-sugestao');
+    if (sug && sug._enhancedText) {
+      textarea.value = sug._enhancedText;
+      sug.remove();
+      textarea.focus();
     }
   };
 
