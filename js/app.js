@@ -737,6 +737,12 @@
   function renderModelosCV() {
     var modelos = ModelRegistry.list('cv');
     var demoData = gerarDadosDemoCV();
+    // Calculate scale to fit previews nicely on screen
+    var pageW = Math.min(900, (window.innerWidth || document.documentElement.clientWidth) - 64);
+    var cardW = (pageW - 20) / 2; // 2 cols, 20px gap
+    var mmToPx = 3.78;
+    var a4W = 210 * mmToPx;
+    var scale = Math.min(0.6, Math.max(0.3, (cardW - 24) / a4W));
     return '<div class="page">' +
       '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
       '<h1>Escolher Modelo</h1>' +
@@ -754,7 +760,7 @@
           }
           return '<div class="model-preview-card" onclick="criarCVComModelo(\'' + m.id + '\')">' +
             '<div class="model-preview-thumb">' +
-              '<div class="model-preview-cv" style="transform:scale(0.22)">' + html + '</div>' +
+              '<div class="model-preview-cv" style="transform:scale(' + scale + ')">' + html + '</div>' +
             '</div>' +
             '<div class="model-preview-label">' + esc(m.name) + '</div>' +
           '</div>';
