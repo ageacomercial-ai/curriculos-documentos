@@ -9,6 +9,7 @@
 }
 
 #app-header {
+  position: relative;
   display: flex;
   align-items: center;
   height: var(--header-h);
@@ -189,12 +190,14 @@
   padding: 24px 20px;
   max-width: 720px;
   margin: 0 auto;
+  overflow: hidden;
   animation: pageEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .page-wide {
   max-width: 100%;
   padding: 24px 20px;
+  overflow: hidden;
 }
 
 @keyframes pageEnter {
@@ -2018,9 +2021,6 @@
   color: #e74c3c;
 }
 
-/* ─── DASHBOARD EMBLEM ─── */
-  font-size: 13px;
-}
 .admin-code-item .code-value {
   font-family: var(--tf-font-mono);
   font-weight: 700;
@@ -2439,15 +2439,6 @@
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--tf-border-color);
-}
-.dashboard-emblem {
-  text-align: center;
-  margin-bottom: 8px;
-}
-.dashboard-emblem svg {
-  width: 80px;
-  height: auto;
-  color: var(--tf-text-primary);
 }
 
 /* ─── PWA INSTALL BUTTON ─── */

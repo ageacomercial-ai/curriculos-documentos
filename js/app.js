@@ -1092,6 +1092,7 @@
               '</div>' +
 
               '<div class="form-actions">' +
+                '<button class="btn-secondary" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar</button>' +
                 '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
               '</div>' +
             '</div>' +
@@ -1123,6 +1124,7 @@
                 }).join('') +
               '</div>' +
               '<div class="form-actions">' +
+                '<button class="btn-secondary" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar</button>' +
                 '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
               '</div>' +
             '</div>' +
@@ -1698,6 +1700,7 @@
           '<p class="subtitle">Após escolher o plano, faz o pagamento por transferência e envia-nos o comprovativo.</p>' +
           '<div class="bank-accordion">' + bankAccordion + '</div>' +
           '<div style="text-align:center;margin-top:20px;font-size:13px;color:var(--tf-text-muted)">Perguntas? Fala connosco pelo <a href="' + whatsappURL() + '" target="_blank" style="color:var(--tf-accent)">WhatsApp</a></div>' +
+          '<div style="text-align:center;margin-top:16px"><button class="btn-secondary" onclick="navegar(\'home\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar ao início</button></div>' +
         '</div>' +
       '</div>';
     }
@@ -1815,6 +1818,7 @@
         '<div class="settings-section"><h2>Sobre</h2>' +
            '<div class="settings-card"><h3>' + CONFIG.brand.name + ' — ' + CONFIG.brand.tagline + '</h3><p>' + CONFIG.brand.slogan + '<br>Versão ' + CONFIG.version + '<br>Feito em Angola, para Angola.<br>Criado pela <strong>' + CONFIG.brand.company + '</strong>.</p></div>' +
         '</div>' +
+        '<div style="margin-top:20px"><button class="btn-secondary" onclick="navegar(\'home\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar ao início</button></div>' +
       '</div>';
     }
   });
