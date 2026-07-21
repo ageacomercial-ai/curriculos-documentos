@@ -170,7 +170,7 @@
           '<p class="subtitle">O que precisas de deixar <strong>feito</strong> hoje?</p>' +
         '</div>' +
         '<div class="home-grid">' +
-          '<div class="home-card home-card-cv" onclick="navegar(\'cv-flow\')">' +
+          '<div class="home-card home-card-cv" onclick="Router.go(\'escolher-modelo-cv\')">' +
             '<div class="home-card-icon">' +
               '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
             '</div>' +
@@ -230,13 +230,13 @@
       return '<div class="page page-docs">' +
         '<div class="page-header-row">' +
           '<h1>Documentos</h1>' +
-           '<button class="btn-create-sm" onclick="navegar(\'cv-flow\')">' +
+           '<button class="btn-create-sm" onclick="Router.go(\'escolher-modelo-cv\')">' +
             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo' +
           '</button>' +
         '</div>' +
         (docs.length > 0
           ? '<div class="doc-list">' + docs.map(renderDoc).join('') + '</div>'
-           : '<div class="empty-state"><p>Nenhum documento ainda.</p><button class="btn-primary" onclick="navegar(\'cv-flow\')">Criar primeiro documento</button></div>'
+           : '<div class="empty-state"><p>Nenhum documento ainda.</p><button class="btn-primary" onclick="Router.go(\'escolher-modelo-cv\')">Criar primeiro documento</button></div>'
         ) +
       '</div>';
     }
@@ -396,7 +396,7 @@
         '<h1>Escolher Tipo</h1>' +
         '<p class="subtitle">O que desejas criar?</p>' +
         '<div class="card-grid">' +
-          '<div class="card" onclick="Router.go(\'cv-flow\')">' +
+          '<div class="card" onclick="Router.go(\'escolher-modelo-cv\')">' +
             '<div class="card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>' +
             '<h3>Currículo / CV</h3>' +
             '<p>Cria um currículo profissional.</p>' +
@@ -552,7 +552,7 @@
 
   window.wizardVoltarInicio = function () {
     limparWizard();
-    Router.go('cv-flow');
+    Router.go('escolher-modelo-cv');
   };
 
   window.wizardAvancarDescricao = function () {
@@ -663,7 +663,7 @@
 
   window.cancelarWizard = function () {
     limparWizard();
-    Router.go('cv-flow');
+    Router.go('escolher-modelo-cv');
   };
 
   function gerarPerguntasWizard(tipo, descricao) {
@@ -715,7 +715,7 @@
       var jaRespondido = sessionStorage.getItem('tf_usar_perfil') !== null;
       if (profile.nome && !jaRespondido) {
         return '<div class="page">' +
-          '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
+          '<button class="btn-back" onclick="Router.go(\'home\')">← Voltar</button>' +
           '<h1>Usar dados do perfil?</h1>' +
           '<p class="subtitle">Tens dados guardados no teu perfil. Queres usá-los neste currículo?</p>' +
           '<div class="choice-cards" style="margin-top:20px">' +
@@ -744,7 +744,7 @@
     var a4W = 210 * mmToPx;
     var scale = Math.min(0.6, Math.max(0.3, (cardW - 24) / a4W));
     return '<div class="page">' +
-      '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
+      '<button class="btn-back" onclick="Router.go(\'home\')">← Voltar</button>' +
       '<h1>Escolher Modelo</h1>' +
       '<p class="subtitle">Vê os currículos preenchidos com dados de exemplo. O teu conteúdo substituirá estes.</p>' +
       '<div class="model-preview-grid">' +
@@ -849,7 +849,7 @@
     title: 'Assistente CV',
     render: function () {
       return '<div class="page">' +
-        '<button class="btn-back" onclick="Router.go(\'cv-flow\')">← Voltar</button>' +
+        '<button class="btn-back" onclick="Router.go(\'home\')">← Voltar</button>' +
         '<h1>Assistente de Criação</h1>' +
         '<p class="subtitle">Responde às perguntas abaixo para gerarmos o teu CV.</p>' +
         '<div id="wizard-cv-container">' +
