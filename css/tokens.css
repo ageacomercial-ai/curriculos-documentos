@@ -37,8 +37,8 @@
   --tf-bg-hover: rgba(46, 204, 113, 0.06);
   --tf-bg-input: #ffffff;
   --tf-text-primary: #1a1a2e;
-  --tf-text-secondary: #7f8c8d;
-  --tf-text-muted: #aab3bc;
+  --tf-text-secondary: #5a6a7a;
+  --tf-text-muted: #8a9a9a;
   --tf-border-color: #e0ddd9;
   --tf-accent: #2ecc71;
   --tf-accent-hover: #27ae60;
@@ -54,8 +54,8 @@
   --tf-bg-hover: rgba(46, 204, 113, 0.1);
   --tf-bg-input: #1a1a2e;
   --tf-text-primary: #e8e8f0;
-  --tf-text-secondary: #9a9ab0;
-  --tf-text-muted: #6a6a80;
+  --tf-text-secondary: #b0b0c8;
+  --tf-text-muted: #9a9ab0;
   --tf-border-color: #2a2a44;
   --tf-shadow: 0 2px 12px rgba(0,0,0,0.3);
   --tf-shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
@@ -71,6 +71,8 @@
   --cream: var(--tf-bg);
   --cream-dark: var(--tf-cream-dark);
   --white: #ffffff;
+  --bg: var(--tf-bg-surface);
+  --card-bg: var(--tf-bg-card);
   --text: var(--tf-text-primary);
   --text-light: var(--tf-text-secondary);
   --text-muted: var(--tf-text-muted);

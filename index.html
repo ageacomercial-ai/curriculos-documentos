@@ -14,7 +14,6 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Tá Feito — Documentos Profissionais">
   <meta name="twitter:description" content="Cria documentos profissionais em Angola. Tu dizes. Nós fazemos.">
-  <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.svg">
   <link rel="canonical" href="https://ta-feito-doc.vercel.app">
@@ -74,6 +73,28 @@
       </nav>
 
       <main id="app-content"></main>
+
+      <!-- Chat Widget — always visible -->
+      <div id="chat-widget" class="chat-widget">
+        <button class="chat-toggle" onclick="chatToggle()" id="chat-toggle-btn" title="Assistente IA">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <div class="chat-panel" id="chat-panel">
+          <div class="chat-header">
+            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Assistente IA</span>
+            <button class="chat-close" onclick="chatToggle()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-msg chat-msg-ia">
+              <div class="chat-msg-content">Olá! Sou o assistente IA do Tá Feito. Podes perguntar sobre o teu documento, pedir sugestões de melhoria, dicas profissionais, ou avaliação do currículo. Como posso ajudar?</div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <textarea class="chat-input" id="chat-input" rows="1" placeholder="Faz uma pergunta..." onkeydown="if(event.key=='Enter'&&!event.shiftKey){event.preventDefault();chatEnviar()}"></textarea>
+            <button class="chat-send" onclick="chatEnviar()" id="chat-send-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <nav id="app-bottom-nav">

@@ -117,7 +117,7 @@ const CONFIG = {
   // ─── IA ───
   ai: {
     provider: 'groq',
-    model: 'llama3-70b-8192',
+    model: 'llama-3.3-70b-versatile',
     // O endpoint do worker é configurado automaticamente
     defaultEndpoint: '',
     maxTokens: 1024,

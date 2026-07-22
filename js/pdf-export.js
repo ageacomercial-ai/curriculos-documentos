@@ -161,6 +161,13 @@
 
       document.getElementById('btn-plan-go').addEventListener('click', function () {
         modal.remove();
+        // Save pending action for return after plan activation
+        if (window.setPendingAction) {
+          var docId = '';
+          var params = new URLSearchParams(window.location.search);
+          if (params.get('id')) docId = params.get('id');
+          window.setPendingAction({ type: 'export_pdf', documentId: docId, returnPath: window.location.hash || window.location.search });
+        }
         if (window.navegar) window.navegar('planos');
         resolve(false);
       });

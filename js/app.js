@@ -644,7 +644,9 @@
         formacoes: profile.formacoes || [],
         competencias: profile.competencias || [],
         idiomas: profile.idiomas || [],
-        certificacoes: profile.certificacoes || []
+        certificacoes: profile.certificacoes || [],
+        cursos: profile.cursos || [],
+        projetos: profile.projetos || []
       };
     } else {
       docData = {
@@ -798,7 +800,10 @@
         { idioma: 'Português', nivel: 'Nativo' },
         { idioma: 'Inglês', nivel: 'Avançado' },
         { idioma: 'Francês', nivel: 'Intermediário' }
-      ]
+      ],
+      cursos: [],
+      certificacoes: [],
+      projetos: []
     };
   }
 
@@ -1029,80 +1034,253 @@
       var data = Storage.getDocData(docId) || {};
 
       if (isCV) {
-        // Render CV editor (prefilled with profile data)
+        // Render CV editor — step-by-step + preview
         var fotoPreview = data.foto && data.foto.startsWith('data:')
           ? '<img src="' + esc(data.foto) + '" alt="" class="photo-preview">'
           : (data.foto ? '<img src="' + esc(data.foto) + '" alt="" class="photo-preview" onerror="this.parentElement.innerHTML=\'<span class=\\\'photo-preview-placeholder\\\'>📷</span>\'">' : '');
 
+        var stepCount = CV_STEPS.length;
+
+        function stepContent(stepIdx, inner) {
+          return '<div class="cv-step' + (stepIdx === 0 ? ' active' : '') + '" data-step="' + stepIdx + '">' +
+            '<div class="cv-step-header">' +
+              '<span class="cv-step-icon">' + CV_STEPS[stepIdx].icon + '</span>' +
+              '<div><span class="cv-step-title">' + CV_STEPS[stepIdx].label + '</span><span class="cv-step-desc">' + stepDesc(stepIdx) + '</span></div>' +
+            '</div>' +
+            inner +
+            cvRenderStepNav(docId, stepIdx, stepCount) +
+          '</div>';
+        }
+
+        function stepDesc(i) {
+          var descs = [
+            'Comece por dizer quem é — nome, cargo, contacto e foto',
+            'Fale sobre o seu percurso profissional em poucas linhas',
+            'Conte-nos sobre cada experiência — nós estruturamos por si',
+            'Adicione a sua formação académica',
+            'Quais são as suas principais competências?',
+            'Que idiomas domina e a que nível?',
+            'Cursos complementares que já concluiu',
+            'Certificações profissionais que possui',
+            'Projectos relevantes que desenvolveu'
+          ];
+          return descs[i] || '';
+        }
+
+        // Build each step
+        var step0_hasData = data.nome && data.nome.trim();
+        var step0 = stepContent(0,
+          '<div class="cv-step-review' + (step0_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 0, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',0)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step0_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 0, '') +
+            '<div class="form-group"><label>Nome completo</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="nome" value="' + esc(data.nome || '') + '" placeholder="Ex.: Adelino Graça"></div>' +
+            '<div class="form-group"><label>Cargo / Profissão</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="cargo" value="' + esc(data.cargo || '') + '" placeholder="Ex.: Diretor Comercial"></div>' +
+            '<div class="form-row"><div class="form-group"><label>Email</label><input type="email" class="cv-field" data-doc="' + docId + '" data-key="email" value="' + esc(data.email || '') + '" placeholder="email@exemplo.com"></div><div class="form-group"><label>Telefone</label><input type="tel" class="cv-field" data-doc="' + docId + '" data-key="telefone" value="' + esc(data.telefone || '') + '" placeholder="+244 900 000 000"></div></div>' +
+            '<div class="form-group"><label>Localização</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="morada" value="' + esc(data.morada || '') + '" placeholder="Ex.: Luanda"></div>' +
+            '<div class="form-group"><label>LinkedIn ou Portfólio</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="social" value="' + esc(data.social || '') + '" placeholder="linkedin.com/in/..."></div>' +
+            '<div class="form-group"><label>Foto</label><div class="photo-upload"><div class="photo-preview-wrap" id="edit-photo-preview-wrap">' + (fotoPreview || '<span class="photo-preview-placeholder">📷</span>') + '</div><div class="photo-upload-fields"><button class="btn-secondary btn-small" onclick="document.getElementById(\'edit-file-foto\').click()">Escolher</button><input type="file" id="edit-file-foto" accept="image/*" style="display:none"><input type="url" id="edit-input-foto" class="cv-field" data-doc="' + docId + '" data-key="foto" value="' + esc(data.foto && !data.foto.startsWith('data:') ? data.foto : '') + '" placeholder="URL da foto..." style="margin-top:6px;font-size:13px"></div></div></div>' +
+          '</div>'
+        );
+
+        var step1_hasData = data.resumo && data.resumo.trim();
+        var step1 = stepContent(1,
+          '<div class="cv-step-review' + (step1_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 1, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',1)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step1_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 1, 'edit-perfil-ai-text') +
+            '<div class="ai-extract-box"><div class="ai-extract-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg><span>Descreva o seu perfil profissional</span></div><p class="ai-extract-hint">Escreva algo simples e a IA transforma numa descrição profissional de alto impacto.</p><textarea id="edit-perfil-ai-text" rows="2" placeholder="Ex.: Profissional com 10+ anos na área comercial, especializado em gestão de equipas e prospecção de negócios..."></textarea><button class="btn-ai" onclick="cvEnhanceResumo(\'' + docId + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar com IA</button><div id="edit-perfil-ai-status"></div></div>' +
+            '<div class="form-section"><div class="form-section-label">Resumo profissional</div><textarea class="cv-field" data-doc="' + docId + '" data-key="resumo" placeholder="O resumo profissional aparece no topo do currículo..." rows="3">' + esc(data.resumo || '') + '</textarea></div>' +
+          '</div>'
+        );
+
+        // Item builder helpers (also used by dynamic add)
+        function buildExpItemHTML(docId2, i, e) {
+          var d = docId2;
+          return '<div class="exp-item">' +
+            '<div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="cargo" value="' + esc(e.cargo) + '"></div><div class="form-group"><label>Empresa</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="empresa" value="' + esc(e.empresa) + '"></div></div>' +
+            '<div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="inicio" value="' + esc(e.inicio) + '" placeholder="Ex.: 2020"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="fim" value="' + esc(e.fim) + '" placeholder="Ex.: 2024 ou Presente"></div></div>' +
+            '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Descreve as tuas responsabilidades...">' + esc(e.descricao) + '</textarea><div class="ai-actions"><button class="btn-ai" onclick="melhorarExpCampo(\'' + d + '\',' + i + ',\'profissional\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar</button><button class="btn-ai btn-ai-secondary" onclick="melhorarExpCampo(\'' + d + '\',' + i + ',\'conciso\')">Conciso</button></div></div>' +
+            '<div class="form-group"><label>Responsabilidades</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="responsabilidades" rows="2" placeholder="Ex.: Liderança de equipa, gestão de projetos...">' + esc(e.responsabilidades || '') + '</textarea></div>' +
+            '<div class="form-group"><label>Conquistas</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="conquistas" rows="2" placeholder="Ex.: Aumentei as vendas em 40%...">' + esc(e.conquistas || '') + '</textarea></div>' +
+            '<button class="btn-remove" onclick="removerExpEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+        }
+        var expItems = (data.experiencias || [{cargo:'',empresa:'',inicio:'',fim:'',descricao:'',responsabilidades:'',conquistas:''}]).map(function (e, i) { return buildExpItemHTML(docId, i, e); }).join('');
+
+        var step2_hasData = data.experiencias && data.experiencias.length > 0 && data.experiencias[0].cargo;
+        var step2 = stepContent(2,
+          '<div class="cv-step-review' + (step2_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 2, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',2)">✏️ Editar</button><button class="btn-secondary btn-small" onclick="adicionarExpEditar(\'' + docId + '\');cvToggleStepEdit(\'' + docId + '\',2)">➕ Adicionar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step2_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 2, 'edit-exp-ai-text') +
+            '<div class="ai-extract-box"><div class="ai-extract-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg><span>Conte-nos sobre uma experiência</span></div><p class="ai-extract-hint">Descreva livremente o que fez. A IA extrai e preenche os campos automaticamente.</p><textarea id="edit-exp-ai-text" rows="3" placeholder="Ex.: Trabalhei como Técnico de Informática na Empresa XPTO de 2020 a 2024. Era responsável pela manutenção de equipamentos e suporte aos utilizadores. Consegui reduzir o tempo de inatividade em 30%..."></textarea><button class="btn-ai" onclick="extractExperienciaIA(\'' + docId + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Extrair com IA</button><div id="edit-exp-ai-status"></div></div>' +
+            '<div class="form-section"><div class="form-section-label">Experiências profissionais</div></div>' +
+            '<div id="edit-exp-container">' + (expItems || '<div class="empty-state">Nenhuma experiência adicionada</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarExpEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar experiência</button>' +
+          '</div>'
+        );
+
+        function buildFormItemHTML(docId2, i, f) {
+          var d = docId2;
+          return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="curso" value="' + esc(f.curso) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="instituicao" value="' + esc(f.instituicao) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="inicio" value="' + esc(f.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="fim" value="' + esc(f.fim) + '"></div></div><button class="btn-remove" onclick="removerFormEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+        }
+        var formItems = (data.formacoes || [{curso:'',instituicao:'',inicio:'',fim:''}]).map(function (f, i) { return buildFormItemHTML(docId, i, f); }).join('');
+
+        var step3_hasData = data.formacoes && data.formacoes.length > 0;
+        var step3 = stepContent(3,
+          '<div class="cv-step-review' + (step3_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 3, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',3)">✏️ Editar</button><button class="btn-secondary btn-small" onclick="adicionarFormEditar(\'' + docId + '\');cvToggleStepEdit(\'' + docId + '\',3)">➕ Adicionar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step3_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 3, '') +
+            '<div id="edit-formacao-container">' + (formItems || '<div class="empty-state">Nenhuma formação adicionada</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarFormEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar formação</button>' +
+          '</div>'
+        );
+
+        function buildSkillRowHTML(docId2, i, s) {
+          var d = docId2;
+          var nvs = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'];
+          return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="competencias" data-index="' + i + '" data-key="nome" value="' + esc(s.nome) + '" placeholder="Ex.: Liderança"></div><div class="form-group" style="width:120px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + d + '" data-array="competencias" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n, ni) { return '<option value="' + ni + '" ' + ((s.nivel == ni) ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerSkillEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+        }
+        var skillItems = (data.competencias || [{nome:'',nivel:'3'}]).map(function (s, i) { return buildSkillRowHTML(docId, i, s); }).join('');
+
+        var step4_hasData = data.competencias && data.competencias.length > 0;
+        var step4 = stepContent(4,
+          '<div class="cv-step-review' + (step4_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 4, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',4)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step4_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 4, '') +
+            '<div class="ai-suggest-bar"><button class="btn-ai" onclick="cvSugerirComp(\'' + docId + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Sugerir competências com IA</button><span class="ai-suggest-hint">Baseado no teu cargo e experiência</span></div>' +
+            '<div id="edit-skills-container">' + (skillItems || '<div class="empty-state">Nenhuma competência adicionada</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarSkillEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar competência</button>' +
+          '</div>'
+        );
+
+        function buildLangRowHTML(docId2, i, l) {
+          var d = docId2;
+          var nvs = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
+          return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="idiomas" data-index="' + i + '" data-key="idioma" value="' + esc(l.idioma) + '"></div><div class="form-group" style="width:140px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + d + '" data-array="idiomas" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n) { return '<option value="' + n + '" ' + (l.nivel === n ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerIdiomaEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+        }
+        var langItems = (data.idiomas || [{idioma:'',nivel:'Iniciante'}]).map(function (l, i) { return buildLangRowHTML(docId, i, l); }).join('');
+
+        var step5_hasData = data.idiomas && data.idiomas.length > 0;
+        var step5 = stepContent(5,
+          '<div class="cv-step-review' + (step5_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 5, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',5)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step5_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 5, '') +
+            '<div id="edit-idiomas-container">' + (langItems || '<div class="empty-state">Nenhum idioma adicionado</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarIdiomaEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar idioma</button>' +
+          '</div>'
+        );
+
+        // Cursos
+        function buildCursoItemHTML(docId2, i, c) {
+          var d = docId2;
+          return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="nome" value="' + esc(c.nome) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="instituicao" value="' + esc(c.instituicao) + '"></div></div>' +
+            '<div class="form-group"><label>Ano</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="ano" value="' + esc(c.ano) + '" placeholder="Ex.: 2023"></div>' +
+            '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Conteúdo do curso...">' + esc(c.descricao) + '</textarea></div>' +
+            '<div class="form-group"><label>URL do Certificado</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="credential_url" value="' + esc(c.credential_url) + '" placeholder="https://..."></div>' +
+            '<button class="btn-remove" onclick="removerCursoEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+        }
+        var cursoItems = (data.cursos || [{nome:'',instituicao:'',ano:'',descricao:'',credential_url:''}]).map(function (c, i) { return buildCursoItemHTML(docId, i, c); }).join('');
+
+        var step6_hasData = data.cursos && data.cursos.length > 0;
+        var step6 = stepContent(6,
+          '<div class="cv-step-review' + (step6_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 6, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',6)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step6_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 6, '') +
+            '<div id="edit-cursos-container">' + (cursoItems || '<div class="empty-state">Nenhum curso adicionado</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarCursoEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar curso</button>' +
+          '</div>'
+        );
+
+        // Certificações
+        function buildCertItemHTML(docId2, i, c) {
+          var d = docId2;
+          return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Certificação</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="nome" value="' + esc(c.nome) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="instituicao" value="' + esc(c.instituicao) + '"></div></div>' +
+            '<div class="form-row"><div class="form-group"><label>Data de Emissão</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="data_emissao" value="' + esc(c.data_emissao) + '" placeholder="Ex.: 2023"></div><div class="form-group"><label>Data de Expiração</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="data_expiracao" value="' + esc(c.data_expiracao) + '" placeholder="Ex.: 2025"></div></div>' +
+            '<div class="form-row"><div class="form-group"><label>ID da Credencial</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="credential_id" value="' + esc(c.credential_id) + '" placeholder="Ex.: ABC123"></div><div class="form-group"><label>URL da Credencial</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="credential_url" value="' + esc(c.credential_url) + '" placeholder="https://..."></div></div>' +
+            '<button class="btn-remove" onclick="removerCertEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+        }
+        var certItems = (data.certificacoes || [{nome:'',instituicao:'',data_emissao:'',data_expiracao:'',credential_id:'',credential_url:''}]).map(function (c, i) { return buildCertItemHTML(docId, i, c); }).join('');
+
+        var step7_hasData = data.certificacoes && data.certificacoes.length > 0;
+        var step7 = stepContent(7,
+          '<div class="cv-step-review' + (step7_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 7, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',7)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step7_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 7, '') +
+            '<div id="edit-cert-container">' + (certItems || '<div class="empty-state">Nenhuma certificação adicionada</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarCertEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar certificação</button>' +
+          '</div>'
+        );
+
+        // Projetos
+        function buildProjItemHTML(docId2, i, p) {
+          var d = docId2;
+          return '<div class="exp-item"><div class="form-group"><label>Projeto</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="nome" value="' + esc(p.nome) + '"></div>' +
+            '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Descreve o projeto...">' + esc(p.descricao) + '</textarea></div>' +
+            '<div class="form-row"><div class="form-group"><label>Papel / Função</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="papel" value="' + esc(p.papel) + '" placeholder="Ex.: Scrum Master"></div><div class="form-group"><label>Tecnologias</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="tecnologias" value="' + esc(p.tecnologias) + '" placeholder="Ex.: React, Node.js"></div></div>' +
+            '<div class="form-group"><label>URL</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="url" value="' + esc(p.url) + '" placeholder="https://..."></div>' +
+            '<button class="btn-remove" onclick="removerProjetoEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
+        }
+        var projItems = (data.projetos || [{nome:'',descricao:'',papel:'',tecnologias:'',url:''}]).map(function (p, i) { return buildProjItemHTML(docId, i, p); }).join('');
+
+        var step8_hasData = data.projetos && data.projetos.length > 0;
+        var step8 = stepContent(8,
+          '<div class="cv-step-review' + (step8_hasData ? '' : ' hidden') + '">' +
+            cvBuildStepReview(docId, 8, data) +
+            '<div class="review-actions"><button class="btn-secondary btn-small" onclick="cvToggleStepEdit(\'' + docId + '\',8)">✏️ Editar</button></div>' +
+          '</div>' +
+          '<div class="cv-step-edit' + (step8_hasData ? ' hidden' : '') + '">' +
+            cvAIBar(docId, 8, '') +
+            '<div id="edit-projetos-container">' + (projItems || '<div class="empty-state">Nenhum projeto adicionado</div>') + '</div>' +
+            '<button class="btn-secondary add-btn" onclick="adicionarProjetoEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar projeto</button>' +
+          '</div>'
+        );
+
+        // Chips for model switching
         var modelos = ModelRegistry.list('cv');
         var atual = docMeta.model || 'classico';
 
-        return '<div class="page page-wide">' +
-          '<div class="split-layout">' +
-            '<div class="split-form">' +
-              '<div class="page-header-row">' +
-                '<h1>' + esc(docMeta.name) + '</h1>' +
-                '<div class="model-selector-inline">' +
-                  modelos.map(function (m) {
-                    return '<span class="model-chip ' + (m.id === atual ? 'selected' : '') + '" onclick="trocarModeloDoc(\'' + docId + '\',\'' + m.id + '\')">' + esc(m.name) + '</span>';
-                  }).join('') +
-                '</div>' +
+        return '<div class="cv-editor-wrapper" data-step="0">' +
+          cvRenderBar(docId, 0, stepCount) +
+          '<div class="cv-mobile-tabs">' +
+            '<button class="cv-mobile-tab active" data-view="edit">✏️ Editar</button>' +
+            '<button class="cv-mobile-tab" data-view="preview">👁 Ver Currículo</button>' +
+          '</div>' +
+          '<div class="cv-editor-body">' +
+            '<div class="cv-editor-form">' +
+              '<div class="model-selector-inline cv-model-chips" onclick="cvToggleModelChips(event)">' +
+                '<span class="model-chip-label">Modelo:</span>' +
+                modelos.map(function (m) {
+                  return '<span class="model-chip ' + (m.id === atual ? 'selected' : '') + '" onclick="event.stopPropagation();trocarModeloDoc(\'' + docId + '\',\'' + m.id + '\')">' + esc(m.name) + '</span>';
+                }).join('') +
+                '<span class="model-chip-toggle">Alterar</span>' +
               '</div>' +
-
-              // Personal Data section
-              '<div class="form-section"><h2>Dados Pessoais</h2>' +
-                '<div class="form-group"><label>Nome completo</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="nome" value="' + esc(data.nome || '') + '" placeholder="Ex.: Adelino Graça"></div>' +
-                '<div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="cargo" value="' + esc(data.cargo || '') + '" placeholder="Ex.: Diretor"></div><div class="form-group"><label>Links</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="social" value="' + esc(data.social || '') + '" placeholder="linkedin.com/..."></div></div>' +
-                '<div class="form-group"><label>Foto</label><div class="photo-upload"><div class="photo-preview-wrap" id="edit-photo-preview-wrap">' + (fotoPreview || '<span class="photo-preview-placeholder">📷</span>') + '</div><div class="photo-upload-fields"><button class="btn-secondary btn-small" onclick="document.getElementById(\'edit-file-foto\').click()">Escolher</button><input type="file" id="edit-file-foto" accept="image/*" style="display:none"><input type="url" id="edit-input-foto" class="cv-field" data-doc="' + docId + '" data-key="foto" value="' + esc(data.foto && !data.foto.startsWith('data:') ? data.foto : '') + '" placeholder="URL da foto..." style="margin-top:6px;font-size:13px"></div></div></div>' +
-                '<div class="form-group"><label>Resumo</label><textarea class="cv-field" data-doc="' + docId + '" data-key="resumo" placeholder="Resumo profissional..." rows="3">' + esc(data.resumo || '') + '</textarea></div>' +
-                '<div class="form-row"><div class="form-group"><label>Email</label><input type="email" class="cv-field" data-doc="' + docId + '" data-key="email" value="' + esc(data.email || '') + '" placeholder="email@exemplo.com"></div><div class="form-group"><label>Telefone</label><input type="tel" class="cv-field" data-doc="' + docId + '" data-key="telefone" value="' + esc(data.telefone || '') + '" placeholder="+244 900 000 000"></div></div>' +
-                '<div class="form-group"><label>Morada</label><input type="text" class="cv-field" data-doc="' + docId + '" data-key="morada" value="' + esc(data.morada || '') + '" placeholder="Ex.: Luanda"></div>' +
-              '</div>' +
-
-              // Experience
-              '<div class="form-section"><h2>Experiência</h2><div id="edit-exp-container">' +
-                (data.experiencias || [{cargo:'',empresa:'',inicio:'',fim:'',descricao:''}]).map(function (e, i) {
-                  return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="cargo" value="' + esc(e.cargo) + '"></div><div class="form-group"><label>Empresa</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="empresa" value="' + esc(e.empresa) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="inicio" value="' + esc(e.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="fim" value="' + esc(e.fim) + '"></div></div><div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + docId + '" data-array="experiencias" data-index="' + i + '" data-key="descricao" rows="2">' + esc(e.descricao) + '</textarea><div class="ai-actions"><button class="btn-ai" onclick="melhorarExpCampo(\'' + docId + '\',' + i + ',\'profissional\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar</button><button class="btn-ai btn-ai-secondary" onclick="melhorarExpCampo(\'' + docId + '\',' + i + ',\'conciso\')">Conciso</button></div></div><button class="btn-remove" onclick="removerExpEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
-                }).join('') + '</div>' +
-                '<button class="btn-secondary add-btn" onclick="adicionarExpEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
-              '</div>' +
-
-              // Education
-              '<div class="form-section"><h2>Formação</h2><div id="edit-formacao-container">' +
-                (data.formacoes || [{curso:'',instituicao:'',inicio:'',fim:''}]).map(function (f, i) {
-                  return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="curso" value="' + esc(f.curso) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="instituicao" value="' + esc(f.instituicao) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="inicio" value="' + esc(f.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="formacoes" data-index="' + i + '" data-key="fim" value="' + esc(f.fim) + '"></div></div><button class="btn-remove" onclick="removerFormEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>';
-                }).join('') + '</div>' +
-                '<button class="btn-secondary add-btn" onclick="adicionarFormEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
-              '</div>' +
-
-              // Skills
-              '<div class="form-section"><h2>Competências</h2><div id="edit-skills-container">' +
-                (data.competencias || [{nome:'',nivel:'3'}]).map(function (s, i) {
-                  var nvs = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'];
-                  return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="competencias" data-index="' + i + '" data-key="nome" value="' + esc(s.nome) + '"></div><div class="form-group" style="width:110px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + docId + '" data-array="competencias" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n, ni) { return '<option value="' + ni + '" ' + ((s.nivel == ni) ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerSkillEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
-                }).join('') + '</div>' +
-                '<button class="btn-secondary add-btn" onclick="adicionarSkillEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
-              '</div>' +
-
-              // Languages
-              '<div class="form-section"><h2>Idiomas</h2><div id="edit-idiomas-container">' +
-                (data.idiomas || [{idioma:'',nivel:'Iniciante'}]).map(function (l, i) {
-                  var nvs = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
-                  return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" class="cv-array-field" data-doc="' + docId + '" data-array="idiomas" data-index="' + i + '" data-key="idioma" value="' + esc(l.idioma) + '"></div><div class="form-group" style="width:130px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + docId + '" data-array="idiomas" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n) { return '<option value="' + n + '" ' + (l.nivel === n ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerIdiomaEditar(\'' + docId + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
-                }).join('') + '</div>' +
-                '<button class="btn-secondary add-btn" onclick="adicionarIdiomaEditar(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>' +
-              '</div>' +
-
-              '<div class="form-actions">' +
-                '<button class="btn-secondary" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar</button>' +
-                '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
-              '</div>' +
+              step0 + step1 + step2 + step3 + step4 + step5 + step6 + step7 + step8 +
             '</div>' +
-            '<div class="split-preview" id="split-preview-area">' +
-              '<div class="preview-header"><span>Pré-visualização</span><button class="btn-primary btn-small" onclick="salvarEVerPreview(\'' + docId + '\')">Ver completo</button></div>' +
-              '<div class="preview-container"><div id="edit-preview-frame">' +
-                '<div class="loading-model"><div class="spinner"></div><p>A carregar pré-visualização...</p></div>' +
-              '</div></div>' +
+            '<div class="cv-editor-preview">' +
+              '<div class="cv-preview-header">Pré-visualização</div>' +
+              '<div class="cv-preview-inner"><div id="cv-preview-frame"><div class="loading-model"><div class="spinner"></div></div></div></div>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -1112,30 +1290,20 @@
         var fields = DocTypes.getFormFields(tipo);
         if (!info) return '<div class="page"><p>Tipo de documento não encontrado.</p><button class="btn-secondary" onclick="navegar(\'documentos\')">Voltar</button></div>';
 
-        return '<div class="page page-wide">' +
-          '<div class="split-layout">' +
-            '<div class="split-form">' +
-              '<h1>' + esc(info.name) + '</h1>' +
-              '<div class="form-section">' +
-                fields.map(function (f) {
-                  var val = esc(data[f.key] || '');
-                  if (f.type === 'textarea') {
-                    return '<div class="form-group"><label>' + esc(f.label) + '</label><textarea class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" placeholder="' + esc(f.placeholder || '') + '" rows="5">' + val + '</textarea></div>';
-                  }
-                  return '<div class="form-group"><label>' + esc(f.label) + '</label><input type="' + (f.type === 'date' ? 'date' : 'text') + '" class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" value="' + val + '" placeholder="' + esc(f.placeholder || '') + '"></div>';
-                }).join('') +
-              '</div>' +
-              '<div class="form-actions">' +
-                '<button class="btn-secondary" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar</button>' +
-                '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
-              '</div>' +
-            '</div>' +
-            '<div class="split-preview" id="split-preview-area">' +
-              '<div class="preview-header"><span>Pré-visualização</span><button class="btn-primary btn-small" onclick="salvarEVerPreview(\'' + docId + '\')">Ver completo</button></div>' +
-              '<div class="preview-container"><div id="edit-preview-frame">' +
-                '<div class="loading-model"><div class="spinner"></div><p>A carregar pré-visualização...</p></div>' +
-              '</div></div>' +
-            '</div>' +
+        return '<div class="page">' +
+          '<h1>' + esc(info.name) + '</h1>' +
+          '<div class="form-section">' +
+            fields.map(function (f) {
+              var val = esc(data[f.key] || '');
+              if (f.type === 'textarea') {
+                return '<div class="form-group"><label>' + esc(f.label) + '</label><textarea class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" placeholder="' + esc(f.placeholder || '') + '" rows="5">' + val + '</textarea></div>';
+              }
+              return '<div class="form-group"><label>' + esc(f.label) + '</label><input type="' + (f.type === 'date' ? 'date' : 'text') + '" class="doc-field" data-doc="' + docId + '" data-key="' + f.key + '" value="' + val + '" placeholder="' + esc(f.placeholder || '') + '"></div>';
+            }).join('') +
+          '</div>' +
+          '<div class="form-actions">' +
+            '<button class="btn-secondary" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar</button>' +
+            '<button class="btn-primary" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pré-visualizar</button>' +
           '</div>' +
         '</div>';
       }
@@ -1143,14 +1311,37 @@
     onRender: function () {
       var params = Router.getParams();
       if (params.id) {
-        setupAutoSaveDoc(params.id);
-        // Try to render preview for CV
-        var docMeta = null;
-        Storage.listDocs().forEach(function (d) { if (d.id === params.id) docMeta = d; });
-        if (docMeta && docMeta.type === 'cv') {
-          atualizarPreviewDoc(params.id);
-        } else if (docMeta && docMeta.type === 'doc') {
-          atualizarPreviewDoc(params.id);
+        // Check if CV editor or doc editor
+        var meta = null;
+        Storage.listDocs().forEach(function (d) { if (d.id === params.id) meta = d; });
+        if (meta && meta.type === 'cv') {
+          // CV editor — init steps, preview, auto-save with debounced preview
+          setupAutoSaveDoc(params.id);
+          // Restore saved step
+          var savedStep = parseInt(sessionStorage.getItem('tf_cv_step_' + params.id));
+          if (!isNaN(savedStep) && savedStep >= 0 && savedStep < CV_STEPS.length) {
+            cvGoToStep(params.id, savedStep);
+          } else {
+            cvAtualizarPreview(params.id);
+          }
+          cvInitMobileTabs();
+          // Debounced preview on input
+          var cvInputs = document.querySelectorAll('#app-content [data-doc="' + params.id + '"]');
+          cvInputs.forEach(function (el) {
+            el.addEventListener('input', function () {
+              if (window._cvPreviewTimer) clearTimeout(window._cvPreviewTimer);
+              window._cvPreviewTimer = setTimeout(function () { cvAtualizarPreview(params.id); }, 250);
+            });
+            el.addEventListener('change', function () {
+              if (window._cvPreviewTimer) clearTimeout(window._cvPreviewTimer);
+              window._cvPreviewTimer = setTimeout(function () { cvAtualizarPreview(params.id); }, 150);
+            });
+          });
+          // Save on page close
+          window._cvBeforeUnload = function () { autosaveDoc(params.id); };
+          window.addEventListener('beforeunload', window._cvBeforeUnload);
+        } else {
+          setupAutoSaveDoc(params.id);
         }
       }
     }
@@ -1178,9 +1369,16 @@
       });
       // Override foto if file upload new one
       var fotoUrl = document.getElementById('edit-input-foto');
-      if (fotoUrl) data.foto = window._editFotoDataUrl || fotoUrl.value;
+      if (fotoUrl) {
+        data.foto = window._editFotoDataUrl || fotoUrl.value;
+        // Fallback: if both are empty, check stored data (for data URLs not shown in input)
+        if (!data.foto) {
+          var stored = Storage.getDocData(docId);
+          if (stored && stored.foto) data.foto = stored.foto;
+        }
+      }
       // Collect arrays
-      ['experiencias', 'formacoes', 'competencias', 'idiomas'].forEach(function (arrName) {
+      ['experiencias', 'formacoes', 'competencias', 'idiomas', 'cursos', 'certificacoes', 'projetos'].forEach(function (arrName) {
         var items = [];
         var indices = {};
         document.querySelectorAll('.cv-array-field[data-doc="' + docId + '"][data-array="' + arrName + '"]').forEach(function (el) {
@@ -1206,9 +1404,6 @@
     Storage.saveDocData(docId, data);
     Storage.updateDoc(docId, {});
     setTimeout(function () { mostrarSaveStatus('✓ Guardado'); }, 400);
-    // Debounced preview update
-    if (window._previewTimer) clearTimeout(window._previewTimer);
-    window._previewTimer = setTimeout(function () { atualizarPreviewDoc(docId); }, 800);
   }
 
   function atualizarPreviewDoc(docId) {
@@ -1243,7 +1438,349 @@
     Router.go('preview-doc?id=' + docId);
   };
 
-  /* ─── PREVIEW DOC ─── */
+  /* ─── CHAT IA ─── */
+
+  window.__chatMessages = [];
+  window.__chatDocId = null;
+
+  window.chatWidgetHTML = function () {
+    return '<div id="chat-widget" class="chat-widget">' +
+      '<button class="chat-toggle" onclick="chatToggle()" id="chat-toggle-btn" title="Assistente IA">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      '</button>' +
+      '<div class="chat-panel" id="chat-panel">' +
+        '<div class="chat-header">' +
+          '<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Assistente IA</span>' +
+          '<button class="chat-close" onclick="chatToggle()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+        '</div>' +
+        '<div class="chat-messages" id="chat-messages">' +
+          '<div class="chat-msg chat-msg-ia">' +
+            '<div class="chat-msg-content">Olá! Sou o assistente IA do Tá Feito. Podes perguntar sobre o teu documento, pedir sugestões de melhoria, dicas profissionais, ou avaliação do currículo. Como posso ajudar?</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="chat-input-area">' +
+          '<textarea class="chat-input" id="chat-input" rows="1" placeholder="Faz uma pergunta..." onkeydown="if(event.key==\'Enter\'&&!event.shiftKey){event.preventDefault();chatEnviar()}"></textarea>' +
+          '<button class="chat-send" onclick="chatEnviar()" id="chat-send-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  };
+
+  window.chatToggle = function () {
+    var panel = document.getElementById('chat-panel');
+    var btn = document.getElementById('chat-toggle-btn');
+    if (!panel) return;
+    var isOpen = panel.classList.toggle('chat-panel--open');
+    if (btn) btn.style.display = isOpen ? 'none' : 'flex';
+    if (isOpen) {
+      document.getElementById('chat-input').focus();
+      chatScrollDown();
+    }
+  };
+
+  window.chatScrollDown = function () {
+    var msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  };
+
+  window.chatEnviar = function () {
+    var input = document.getElementById('chat-input');
+    var btn = document.getElementById('chat-send-btn');
+    if (!input || !input.value.trim()) return;
+
+    var text = input.value.trim();
+    input.value = '';
+    input.style.height = 'auto';
+
+    // Add user message
+    addChatMsg('user', text);
+    chatScrollDown();
+
+    // Loading state
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>';
+
+    // Get doc context
+    var params = Router.getParams();
+    var docId = params.id;
+    window.__chatMessages.push({ role: 'user', content: text });
+
+    var context = null;
+    if (docId) {
+      var meta = null;
+      Storage.listDocs().forEach(function (d) { if (d.id === docId) meta = d; });
+      if (meta) {
+        context = { type: meta.type, model: meta.model || meta.docType, data: Storage.getDocData(docId) || {} };
+      }
+    }
+
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: window.__chatMessages, context: context })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.reply) {
+        window.__chatMessages.push({ role: 'assistant', content: data.reply });
+        addChatMsg('ia', data.reply);
+      } else {
+        addChatMsg('ia', 'Desculpa, não consegui processar o pedido. Tenta de novo.');
+      }
+    })
+    .catch(function () {
+      addChatMsg('ia', 'Erro de conexão. Verifica a tua internet e tenta novamente.');
+    })
+    .finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+      chatScrollDown();
+    });
+  };
+
+  function addChatMsg(role, text) {
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    var div = document.createElement('div');
+    div.className = 'chat-msg chat-msg-' + role;
+    div.innerHTML = '<div class="chat-msg-content">' + esc(text).replace(/\n/g, '<br>') + '</div>';
+    container.appendChild(div);
+    chatScrollDown();
+  }
+
+  /* ─── CV STEPS ─── */
+  var CV_STEPS = [
+    { id: 'dados-pessoais', label: 'Sobre Voc\u00ea', icon: '\u{1F464}' },
+    { id: 'perfil', label: 'Perfil Profissional', icon: '\u{1F4DD}' },
+    { id: 'experiencia', label: 'Experi\u00eancia', icon: '\u{1F4BC}' },
+    { id: 'formacao', label: 'Forma\u00e7\u00e3o', icon: '\u{1F393}' },
+    { id: 'competencias', label: 'Compet\u00eancias', icon: '\u{2B50}' },
+    { id: 'idiomas', label: 'Idiomas', icon: '\u{1F310}' },
+    { id: 'cursos', label: 'Cursos', icon: '\u{1F393}' },
+    { id: 'certificacoes', label: 'Certificações', icon: '\u{1F4DC}' },
+    { id: 'projetos', label: 'Projetos', icon: '\u{1F4BB}' }
+  ];
+
+  function cvRenderBar(docId, step, total) {
+    var s = CV_STEPS[step];
+    var comp = window.cvCalcCompleteness ? cvCalcCompleteness(docId) : { pct: 0, done: 0, total: 9 };
+    return '<div class="cv-bar">' +
+      '<button class="btn-bar btn-bar-back" onclick="navegar(\'documentos\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg><span class="bar-back-label"> Voltar</span></button>' +
+      '<div class="cv-bar-center">' +
+        '<span class="cv-bar-label">' + (s ? s.icon + ' ' + s.label : '') + '</span>' +
+        '<span class="cv-bar-count">' + (step + 1) + ' / ' + total + '</span>' +
+        '<div class="cv-bar-progress"><div class="cv-bar-progress-fill" style="width:' + comp.pct + '%"></div></div>' +
+      '</div>' +
+      '<button class="btn-bar btn-bar-preview" onclick="salvarEVerPreview(\'' + docId + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span class="bar-preview-label"> ' + comp.pct + '%</span></button>' +
+    '</div>' +
+    '<div class="cv-dots">' +
+      CV_STEPS.map(function (_, i) {
+        return '<span class="cv-dot' + (i === step ? ' active' : '') + (i < step ? ' done' : '') + '" data-step="' + i + '" onclick="cvGoToStep(\'' + docId + '\',' + i + ')"></span>';
+      }).join('') +
+    '</div>';
+  }
+
+  function cvRenderStepNav(docId, step, total) {
+    var prevBtn = step > 0
+      ? '<button class="btn-secondary btn-step" onclick="cvPrevStep(\'' + docId + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Anterior</button>'
+      : '<span></span>';
+    var nextLabel = step < total - 1 ? 'Pr\u00f3ximo <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' : 'Concluir <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+    return '<div class="step-nav">' + prevBtn +
+      '<span class="step-counter">Passo ' + (step + 1) + ' de ' + total + '</span>' +
+      '<button class="btn-primary btn-step" onclick="cvNextStep(\'' + docId + '\')">' + nextLabel + '</button>' +
+    '</div>';
+  }
+
+  /* ─── CV STEP NAVIGATION ─── */
+
+  window.cvNextStep = function (docId) {
+    var wrapper = document.querySelector('.cv-editor-wrapper');
+    if (!wrapper) return;
+    var current = parseInt(wrapper.getAttribute('data-step') || '0');
+    if (current < CV_STEPS.length - 1) {
+      if (docId) autosaveDoc(docId);
+      cvGoToStep(docId, current + 1);
+    } else {
+      salvarEVerPreview(docId);
+    }
+  };
+
+  window.cvPrevStep = function (docId) {
+    var wrapper = document.querySelector('.cv-editor-wrapper');
+    if (!wrapper) return;
+    var current = parseInt(wrapper.getAttribute('data-step') || '0');
+    if (current > 0) cvGoToStep(docId, current - 1);
+  };
+
+  window.cvGoToStep = function (docId, step) {
+    var wrapper = document.querySelector('.cv-editor-wrapper');
+    if (!wrapper) return;
+    // Save current data before navigating
+    if (docId) {
+      if (window._cvPreviewTimer) clearTimeout(window._cvPreviewTimer);
+      autosaveDoc(docId);
+    }
+    wrapper.setAttribute('data-step', step);
+    // Save step in sessionStorage so it persists across reloads
+    if (docId) sessionStorage.setItem('tf_cv_step_' + docId, step);
+
+    document.querySelectorAll('.cv-step').forEach(function (el) {
+      el.classList.toggle('active', parseInt(el.getAttribute('data-step')) === step);
+    });
+
+    document.querySelectorAll('.cv-dot').forEach(function (el) {
+      var i = parseInt(el.getAttribute('data-step'));
+      el.classList.toggle('active', i === step);
+      el.classList.toggle('done', i < step);
+    });
+
+    var label = document.querySelector('.cv-bar-label');
+    if (label) label.textContent = CV_STEPS[step].icon + ' ' + CV_STEPS[step].label;
+    var count = document.querySelector('.cv-bar-count');
+    if (count) count.textContent = (step + 1) + ' / ' + CV_STEPS.length;
+
+    // Update completeness bar
+    if (docId && window.cvCalcCompleteness) {
+      var comp = cvCalcCompleteness(docId);
+      var fill = document.querySelector('.cv-bar-progress-fill');
+      if (fill) fill.style.width = comp.pct + '%';
+      var previewBtn = document.querySelector('.btn-bar-preview');
+      if (previewBtn) {
+        var label = previewBtn.querySelector('span');
+        if (label) label.textContent = ' ' + comp.pct + '%';
+      }
+    }
+
+    // Rebuild step review and reset view mode
+    if (docId && window.cvBuildStepReview) {
+      var newData = Storage.getDocData(docId) || {};
+      var stepEl = document.querySelector('.cv-step[data-step="' + step + '"]');
+      if (stepEl) {
+        var review = stepEl.querySelector('.cv-step-review');
+        var edit = stepEl.querySelector('.cv-step-edit');
+        if (review) {
+          review.innerHTML = cvBuildStepReview(docId, step, newData);
+          // Determine if review or edit should be shown
+          var hasData = false;
+          if (step === 0) hasData = newData.nome && newData.nome.trim();
+          else if (step === 1) hasData = newData.resumo && newData.resumo.trim();
+          else if (step === 2) hasData = newData.experiencias && newData.experiencias.length > 0 && newData.experiencias[0].cargo;
+          else if (step === 3) hasData = newData.formacoes && newData.formacoes.length > 0;
+          else if (step === 4) hasData = newData.competencias && newData.competencias.length > 0;
+          else if (step === 5) hasData = newData.idiomas && newData.idiomas.length > 0;
+          else if (step === 6) hasData = newData.cursos && newData.cursos.length > 0;
+          else if (step === 7) hasData = newData.certificacoes && newData.certificacoes.length > 0;
+          else if (step === 8) hasData = newData.projetos && newData.projetos.length > 0;
+          review.classList.toggle('hidden', !hasData);
+          if (edit) edit.classList.toggle('hidden', hasData);
+        }
+      }
+    }
+
+    // Mobile: ensure correct view
+    var form = document.querySelector('.cv-editor-form');
+    var preview = document.querySelector('.cv-editor-preview');
+    if (form) form.scrollTop = 0;
+    cvAtualizarPreview(docId);
+  };
+
+  window.cvAtualizarPreview = function (docId) {
+    if (!docId) return;
+    var frame = document.getElementById('cv-preview-frame');
+    if (!frame) return;
+    var docMeta = null;
+    Storage.listDocs().forEach(function (d) { if (d.id === docId) docMeta = d; });
+    if (!docMeta) return;
+    var data = recolherDadosDoc(docId);
+    data.modelo = docMeta.model || 'classico';
+    var model = ModelRegistry.get('cv', data.modelo) || ModelRegistry.list('cv')[0];
+    if (model) {
+      frame.innerHTML = model.render(data);
+      var parent = frame.parentElement;
+      if (parent) {
+        var pw = parent.clientWidth - 24;
+        var maxW = 210 * 3.7795;
+        var s = Math.min(1, pw / maxW);
+        frame.style.transform = 'scale(' + s + ')';
+        frame.style.transformOrigin = 'top center';
+      }
+    }
+  };
+
+  window.cvInitMobileTabs = function () {
+    var tabs = document.querySelectorAll('.cv-mobile-tab');
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        var view = tab.getAttribute('data-view');
+        var form = document.querySelector('.cv-editor-form');
+        var preview = document.querySelector('.cv-editor-preview');
+        if (form) form.style.display = view === 'edit' ? '' : 'none';
+        if (preview) preview.style.display = view === 'preview' ? '' : 'none';
+      });
+    });
+  };
+
+  window.cvEnhanceResumo = function (docId) {
+    var textarea = document.querySelector('.cv-field[data-doc="' + docId + '"][data-key="resumo"]');
+    // If the resumo field is empty, copy from AI textarea
+    if (textarea && !textarea.value.trim()) {
+      var aiText = document.getElementById('edit-perfil-ai-text');
+      if (aiText && aiText.value.trim()) textarea.value = aiText.value.trim();
+    }
+    if (!textarea || !textarea.value.trim()) return;
+    AI.enhanceText(textarea.value, 'profissional').then(function (sug) {
+      if (!sug) return;
+      // Show suggestion inline
+      var container = textarea.parentElement;
+      var existing = container.querySelector('.melhoria-sugestao');
+      if (existing) existing.remove();
+      var div = document.createElement('div');
+      div.className = 'melhoria-sugestao';
+      div.innerHTML = '<div class="melhoria-sugerida">' + esc(sug).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="melhoria-acoes"><button class="btn-primary btn-small" onclick="aceitarMelhoriaResumo(\'' + docId + '\',this)">✓ Aceitar</button><button class="btn-secondary btn-small" onclick="this.closest(\'.melhoria-sugestao\').remove()">✕ Dispensar</button></div>';
+      container.appendChild(div);
+    });
+  };
+
+  window.aceitarMelhoriaResumo = function (docId, btn) {
+    var sug = btn.closest('.melhoria-sugestao').querySelector('.melhoria-sugerida');
+    if (!sug) return;
+    var textarea = document.querySelector('.cv-field[data-doc="' + docId + '"][data-key="resumo"]');
+    if (textarea) textarea.value = sug.textContent || sug.innerText;
+    btn.closest('.melhoria-sugestao').remove();
+    if (docId) { autosaveDoc(docId); cvAtualizarPreview(docId); }
+  };
+
+  window.cvSugerirComp = function (docId) {
+    var data = recolherDadosDoc(docId);
+    var prompt = 'Sugere 5 competências-chave para um profissional de ' + (data.cargo || 'área profissional desconhecida') + ' em Angola. Responde apenas com os nomes das competências separados por vírgulas.';
+    AI.enhanceText(prompt, 'profissional').then(function (sug) {
+      if (!sug) return;
+      var comps = sug.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      var container = document.getElementById('edit-skills-container');
+      if (!container) return;
+      comps.forEach(function (nome, idx) {
+        // Check if already exists
+        var existing = container.querySelectorAll('.cv-array-field[data-array="competencias"][data-key="nome"]');
+        var found = false;
+        existing.forEach(function (el) {
+          if (el.value.toLowerCase() === nome.toLowerCase()) found = true;
+        });
+        if (!found) {
+          // Add new item — reuse the existing add function
+          window.adicionarSkillEditar(docId);
+          // Set the last item's name
+          var lastContainer = container;
+          var inputs = lastContainer.querySelectorAll('.cv-array-field[data-array="competencias"][data-key="nome"]');
+          var lastInput = inputs[inputs.length - 1];
+          if (lastInput) { lastInput.value = nome; }
+        }
+      });
+      if (docId) { autosaveDoc(docId); cvAtualizarPreview(docId); }
+    });
+  };
 
   Router.register('preview-doc', {
     title: 'Pré-visualizar',
@@ -1381,7 +1918,9 @@
       formacoes: [],
       competencias: [],
       idiomas: [],
-      certificacoes: []
+      certificacoes: [],
+      cursos: [],
+      projetos: []
     };
 
     document.querySelectorAll('[name^="perfil-exp-cargo-"]').forEach(function (el, i) {
@@ -1509,10 +2048,33 @@
     p.certificacoes.splice(i, 1);
     if (!p.certificacoes.length) p.certificacoes.push({});
     Storage.saveProfile(p);
-    Router.go('perfil');
+    renderCertList();
   };
 
-  /* ─── AÇÕES DE EDIÇÃO CV ─── */
+  // ─── ITEM BUILDER FUNCTIONS (for dynamic add/remove) ───
+  var _esc = window.esc || function (s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  function buildExpItemHTML(docId2, i, e) { var d = docId2; return '<div class="exp-item">' + '<div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="cargo" value="' + _esc(e.cargo) + '"></div><div class="form-group"><label>Empresa</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="empresa" value="' + _esc(e.empresa) + '"></div></div>' + '<div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="inicio" value="' + _esc(e.inicio) + '" placeholder="Ex.: 2020"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="fim" value="' + _esc(e.fim) + '" placeholder="Ex.: 2024 ou Presente"></div></div>' + '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Descreve as tuas responsabilidades...">' + _esc(e.descricao) + '</textarea><div class="ai-actions"><button class="btn-ai" onclick="melhorarExpCampo(\'' + d + '\',' + i + ',\'profissional\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/></svg> Melhorar</button><button class="btn-ai btn-ai-secondary" onclick="melhorarExpCampo(\'' + d + '\',' + i + ',\'conciso\')">Conciso</button></div></div>' + '<div class="form-group"><label>Responsabilidades</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="responsabilidades" rows="2" placeholder="Ex.: Liderança de equipa, gestão de projetos...">' + _esc(e.responsabilidades || '') + '</textarea></div>' + '<div class="form-group"><label>Conquistas</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="experiencias" data-index="' + i + '" data-key="conquistas" rows="2" placeholder="Ex.: Aumentei as vendas em 40%...">' + _esc(e.conquistas || '') + '</textarea></div>' + '<button class="btn-remove" onclick="removerExpEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>'; }
+  function buildFormItemHTML(docId2, i, f) { var d = docId2; return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="curso" value="' + _esc(f.curso) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="instituicao" value="' + _esc(f.instituicao) + '"></div></div><div class="form-row"><div class="form-group"><label>Início</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="inicio" value="' + _esc(f.inicio) + '"></div><div class="form-group"><label>Fim</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="formacoes" data-index="' + i + '" data-key="fim" value="' + _esc(f.fim) + '"></div></div><button class="btn-remove" onclick="removerFormEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>'; }
+  function buildSkillRowHTML(docId2, i, s) { var d = docId2; var nvs = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert']; return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Competência</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="competencias" data-index="' + i + '" data-key="nome" value="' + _esc(s.nome) + '" placeholder="Ex.: Liderança"></div><div class="form-group" style="width:120px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + d + '" data-array="competencias" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n, ni) { return '<option value="' + ni + '" ' + ((s.nivel == ni) ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerSkillEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'; }
+  function buildLangRowHTML(docId2, i, l) { var d = docId2; var nvs = ['Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo']; return '<div class="skill-row"><div class="form-group" style="flex:1;margin-bottom:0"><label>Idioma</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="idiomas" data-index="' + i + '" data-key="idioma" value="' + _esc(l.idioma) + '"></div><div class="form-group" style="width:140px;margin-bottom:0"><label>Nível</label><select class="cv-array-field" data-doc="' + d + '" data-array="idiomas" data-index="' + i + '" data-key="nivel">' + nvs.map(function (n) { return '<option value="' + n + '" ' + (l.nivel === n ? 'selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><button class="btn-icon-sm" onclick="removerIdiomaEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'; }
+  function buildCursoItemHTML(docId2, i, c) { var d = docId2; return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Curso</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="nome" value="' + _esc(c.nome) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="instituicao" value="' + _esc(c.instituicao) + '"></div></div>' + '<div class="form-group"><label>Ano</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="ano" value="' + _esc(c.ano) + '" placeholder="Ex.: 2023"></div>' + '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Conteúdo do curso...">' + _esc(c.descricao) + '</textarea></div>' + '<div class="form-group"><label>URL do Certificado</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="cursos" data-index="' + i + '" data-key="credential_url" value="' + _esc(c.credential_url) + '" placeholder="https://..."></div>' + '<button class="btn-remove" onclick="removerCursoEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>'; }
+  function buildCertItemHTML(docId2, i, c) { var d = docId2; return '<div class="exp-item"><div class="form-row"><div class="form-group"><label>Certificação</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="nome" value="' + _esc(c.nome) + '"></div><div class="form-group"><label>Instituição</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="instituicao" value="' + _esc(c.instituicao) + '"></div></div>' + '<div class="form-row"><div class="form-group"><label>Data de Emissão</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="data_emissao" value="' + _esc(c.data_emissao) + '" placeholder="Ex.: 2023"></div><div class="form-group"><label>Data de Expiração</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="data_expiracao" value="' + _esc(c.data_expiracao) + '" placeholder="Ex.: 2025"></div></div>' + '<div class="form-row"><div class="form-group"><label>ID da Credencial</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="credential_id" value="' + _esc(c.credential_id) + '" placeholder="Ex.: ABC123"></div><div class="form-group"><label>URL da Credencial</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="certificacoes" data-index="' + i + '" data-key="credential_url" value="' + _esc(c.credential_url) + '" placeholder="https://..."></div></div>' + '<button class="btn-remove" onclick="removerCertEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>'; }
+  function buildProjItemHTML(docId2, i, p) { var d = docId2; return '<div class="exp-item"><div class="form-group"><label>Projeto</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="nome" value="' + _esc(p.nome) + '"></div>' + '<div class="form-group"><label>Descrição</label><textarea class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="descricao" rows="2" placeholder="Descreve o projeto...">' + _esc(p.descricao) + '</textarea></div>' + '<div class="form-row"><div class="form-group"><label>Papel / Função</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="papel" value="' + _esc(p.papel) + '" placeholder="Ex.: Scrum Master"></div><div class="form-group"><label>Tecnologias</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="tecnologias" value="' + _esc(p.tecnologias) + '" placeholder="Ex.: React, Node.js"></div></div>' + '<div class="form-group"><label>URL</label><input type="text" class="cv-array-field" data-doc="' + d + '" data-array="projetos" data-index="' + i + '" data-key="url" value="' + _esc(p.url) + '" placeholder="https://..."></div>' + '<button class="btn-remove" onclick="removerProjetoEditar(\'' + d + '\',' + i + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Remover</button></div>'; }
+  function _rebuildContainer(containerId, dataArray, builderFn) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = (dataArray && dataArray.length) ? dataArray.map(function (item, idx) { return builderFn(item, idx); }).join('') : '<div class="empty-state">Nenhum item adicionado</div>';
+  }
+  // Wrapped builders for _rebuildContainer
+  function _expB(item, idx) { return buildExpItemHTML(item._docId || '', idx, item); }
+  function _formB(item, idx) { return buildFormItemHTML(item._docId || '', idx, item); }
+  function _skillB(item, idx) { return buildSkillRowHTML(item._docId || '', idx, item); }
+  function _langB(item, idx) { return buildLangRowHTML(item._docId || '', idx, item); }
+  function _cursoB(item, idx) { return buildCursoItemHTML(item._docId || '', idx, item); }
+  function _certB(item, idx) { return buildCertItemHTML(item._docId || '', idx, item); }
+  function _projB(item, idx) { return buildProjItemHTML(item._docId || '', idx, item); }
+
+  // ─── CV EDITOR ADD/REMOVE FUNCTIONS ───
 
   window.adicionarExpEditar = function (docId) {
     var data = Storage.getDocData(docId) || {};
@@ -1574,6 +2136,54 @@
     var data = Storage.getDocData(docId) || {};
     data.idiomas.splice(i, 1);
     if (!data.idiomas.length) data.idiomas.push({ idioma: '', nivel: 'Iniciante' });
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarCursoEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.cursos = data.cursos || [];
+    data.cursos.push({nome:'',instituicao:'',ano:'',descricao:'',credential_url:''});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerCursoEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.cursos.splice(i, 1);
+    if (!data.cursos.length) data.cursos.push({nome:'',instituicao:'',ano:'',descricao:'',credential_url:''});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarCertEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.certificacoes = data.certificacoes || [];
+    data.certificacoes.push({nome:'',instituicao:'',data_emissao:'',data_expiracao:'',credential_id:'',credential_url:''});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerCertEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.certificacoes.splice(i, 1);
+    if (!data.certificacoes.length) data.certificacoes.push({nome:'',instituicao:'',data_emissao:'',data_expiracao:'',credential_id:'',credential_url:''});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.adicionarProjetoEditar = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    data.projetos = data.projetos || [];
+    data.projetos.push({nome:'',descricao:'',papel:'',tecnologias:'',url:''});
+    Storage.saveDocData(docId, data);
+    Router.go('editar-doc?id=' + docId);
+  };
+
+  window.removerProjetoEditar = function (docId, i) {
+    var data = Storage.getDocData(docId) || {};
+    data.projetos.splice(i, 1);
+    if (!data.projetos.length) data.projetos.push({nome:'',descricao:'',papel:'',tecnologias:'',url:''});
     Storage.saveDocData(docId, data);
     Router.go('editar-doc?id=' + docId);
   };
@@ -1657,6 +2267,436 @@
     }
   };
 
+  /* ─── AI EXTRACT EXPERIENCE ─── */
+  window.extractExperienciaIA = async function (docId) {
+    var textarea = document.getElementById('edit-exp-ai-text');
+    var statusEl = document.getElementById('edit-exp-ai-status');
+    if (!textarea || !textarea.value.trim()) {
+      if (statusEl) statusEl.innerHTML = '<span class="melhoria-error">Escreva primeiro sobre a sua experiência.</span>';
+      return;
+    }
+    if (statusEl) statusEl.innerHTML = '<span class="melhoria-loading">A extrair dados com IA...</span>';
+    textarea.disabled = true;
+    try {
+      var resp = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textarea.value, type: 'experiencia' })
+      });
+      var json = await resp.json();
+      if (!resp.ok || !json.result) throw new Error(json.error || 'Erro ao extrair');
+      var extracted = json.result;
+      // Save data and reload to show the new item properly
+      var data = Storage.getDocData(docId) || {};
+      data.experiencias = data.experiencias || [];
+      // If last experience is empty, fill it; otherwise add new
+      var last = data.experiencias[data.experiencias.length - 1];
+      if (last && !last.cargo && !last.empresa) {
+        // Fill current empty item
+      } else {
+        data.experiencias.push({});
+        last = data.experiencias[data.experiencias.length - 1];
+      }
+      if (extracted.cargo) last.cargo = extracted.cargo;
+      if (extracted.empresa) last.empresa = extracted.empresa;
+      if (extracted.inicio) last.inicio = extracted.inicio;
+      if (extracted.fim) last.fim = extracted.fim;
+      if (extracted.descricao) last.descricao = extracted.descricao;
+      if (extracted.responsabilidades) last.responsabilidades = extracted.responsabilidades;
+      if (extracted.conquistas) last.conquistas = extracted.conquistas;
+      Storage.saveDocData(docId, data);
+      // Reload to show the new item
+      Router.go('editar-doc?id=' + docId);
+    } catch (err) {
+      if (statusEl) statusEl.innerHTML = '<span class="melhoria-error">' + (err.message || 'Erro') + '</span>';
+      textarea.disabled = false;
+    }
+  };
+
+  /* ─── CV COMPLETENESS (TIERED) ─── */
+  window.cvCalcCompleteness = function (docId) {
+    var data = Storage.getDocData(docId) || {};
+    // Essential (60%)
+    var essential = [
+      { label: 'Nome', ok: data.nome && data.nome.trim() },
+      { label: 'Contacto', ok: data.email && data.email.trim() },
+      { label: 'Perfil', ok: data.resumo && data.resumo.trim() },
+      { label: 'Experiência ou Formação', ok: (data.experiencias && data.experiencias.length > 0 && data.experiencias[0].cargo) || (data.formacoes && data.formacoes.length > 0) }
+    ];
+    // Recommended (25%)
+    var recommended = [
+      { label: 'Competências', ok: data.competencias && data.competencias.length > 0 },
+      { label: 'Idiomas', ok: data.idiomas && data.idiomas.length > 0 },
+      { label: 'Cursos', ok: data.cursos && data.cursos.length > 0 },
+      { label: 'Projetos', ok: data.projetos && data.projetos.length > 0 }
+    ];
+    // Optional (15%)
+    var optional = [
+      { label: 'Certificações', ok: data.certificacoes && data.certificacoes.length > 0 },
+      { label: 'Conquistas', ok: data.experiencias && data.experiencias.some(function (e) { return e.conquistas && e.conquistas.trim(); }) },
+      { label: 'Cargo definido', ok: data.cargo && data.cargo.trim() },
+      { label: 'Foto', ok: data.foto && data.foto.trim() }
+    ];
+    var eDone = essential.filter(function (c) { return c.ok; }).length;
+    var rDone = recommended.filter(function (c) { return c.ok; }).length;
+    var oDone = optional.filter(function (c) { return c.ok; }).length;
+    var pct = Math.round((eDone / essential.length) * 60 + (rDone / recommended.length) * 25 + (oDone / optional.length) * 15);
+    return { done: eDone + rDone + oDone, total: essential.length + recommended.length + optional.length, pct: Math.min(pct, 100) };
+  };
+
+  /* ─── VOICE & AI ASSISTANT ─── */
+  window._cvSpeechRecognition = null;
+  window._cvSpeechActive = null;
+  window._cvSpeechBuffer = '';
+  window._cvSpeechRestartCount = 0;
+
+  function cvAIBar(docId, stepIdx, targetId) {
+    var stepLabels = ['👤 Sobre Você','📝 Perfil','💼 Experiência','🎓 Formação','⭐ Competências','🌐 Idiomas','🎓 Cursos','📜 Certificações','💻 Projetos'];
+    return '<div class="cv-step-ai-bar">' +
+      (targetId ? '<button class="btn-ai-voice" onclick="cvSpeakField(\'' + docId + '\',' + stepIdx + ',\'' + targetId + '\')" data-speak-btn="' + targetId + '">🎙️ Falar</button>' : '') +
+      '<button class="btn-ai-help" onclick="cvAIAssistStep(\'' + docId + '\',' + stepIdx + ')">✨ Ajudar com IA</button>' +
+      '<span class="cv-step-ai-hint">' + stepLabels[stepIdx] + '</span>' +
+    '</div>';
+  }
+
+  window.cvSpeakField = function (docId, stepIdx, targetId) {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('O reconhecimento de voz não está disponível neste navegador. Tenta usar o Chrome.');
+      return;
+    }
+    var btn = document.querySelector('[data-speak-btn="' + targetId + '"]');
+    if (!btn) return;
+
+    // ── STOP if already capturing ──
+    if (window._cvSpeechActive === targetId) {
+      cvStopSpeech(targetId);
+      return;
+    }
+
+    // ── START ──
+    try {
+      btn.innerHTML = 'A permitir acesso ao microfone...';
+      btn.disabled = true;
+
+      var targetEl = document.getElementById(targetId);
+      if (!targetEl) { btn.innerHTML = '🎙️ Falar'; btn.disabled = false; return; }
+
+      // Preserve existing text as buffer start
+      window._cvSpeechBuffer = targetEl.value || '';
+      window._cvSpeechRestartCount = 0;
+
+      cvStartRecognition(targetId, targetEl, btn);
+    } catch (e) {
+      alert('Erro ao iniciar microfone: ' + e.message);
+      btn.innerHTML = '🎙️ Falar';
+      btn.classList.remove('speaking');
+      btn.disabled = false;
+      window._cvSpeechActive = null;
+    }
+  };
+
+  function cvStartRecognition(targetId, targetEl, btn) {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    if (window._cvSpeechActive !== targetId) return;
+
+    try {
+      var recognition = new SpeechRecognition();
+      recognition.lang = 'pt-AO';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      window._cvSpeechRecognition = recognition;
+      window._cvSpeechActive = targetId;
+      btn.innerHTML = '🔴 A captar...';
+      btn.classList.add('speaking');
+      btn.disabled = false;
+
+      var lastInterim = '';
+
+      recognition.onresult = function (event) {
+        var finalTranscript = '';
+        var interimTranscript = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+          var result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript;
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+        // Append only final results to buffer; show interim separately
+        if (finalTranscript) {
+          window._cvSpeechBuffer += (window._cvSpeechBuffer && !window._cvSpeechBuffer.endsWith(' ') && !finalTranscript.startsWith(' ') ? ' ' : '') + finalTranscript;
+        }
+        lastInterim = interimTranscript;
+        // Display buffer + interim
+        targetEl.value = window._cvSpeechBuffer + (interimTranscript ? ' ' + interimTranscript : '');
+        targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      recognition.onerror = function (event) {
+        // "no-speech" is not an error — silently restart
+        if (event.error === 'no-speech' || event.error === 'aborted') {
+          // Silently restart if still active
+          if (window._cvSpeechActive === targetId) {
+            cvStartRecognition(targetId, targetEl, btn);
+          }
+          return;
+        }
+        // Real errors: audio-capture, not-allowed, service-not-allowed
+        if (event.error === 'not-allowed') {
+          btn.innerHTML = '🎙️ Falar';
+          btn.classList.remove('speaking');
+          window._cvSpeechActive = null;
+          window._cvSpeechRecognition = null;
+          alert('Microfone sem permissão. Verifica as definições do navegador.');
+          return;
+        }
+        // Other errors — stop
+        btn.innerHTML = '🎙️ Falar';
+        btn.classList.remove('speaking');
+        window._cvSpeechActive = null;
+        window._cvSpeechRecognition = null;
+      };
+
+      recognition.onend = function () {
+        // If user stopped explicitly, don't restart
+        if (window._cvSpeechActive !== targetId) return;
+        // Restart seamlessly — user should not notice
+        window._cvSpeechRestartCount++;
+        cvStartRecognition(targetId, targetEl, btn);
+      };
+
+      recognition.start();
+    } catch (e) {
+      // Retry once on temporary failure
+      if (window._cvSpeechRestartCount < 1) {
+        window._cvSpeechRestartCount++;
+        cvStartRecognition(targetId, targetEl, btn);
+      } else {
+        btn.innerHTML = '🎙️ Falar';
+        btn.classList.remove('speaking');
+        window._cvSpeechActive = null;
+        window._cvSpeechRecognition = null;
+      }
+    }
+  }
+
+  function cvStopSpeech(targetId) {
+    if (window._cvSpeechRecognition) {
+      try { window._cvSpeechRecognition.stop(); } catch (e) {}
+      window._cvSpeechRecognition = null;
+    }
+    window._cvSpeechActive = null;
+    var btn = document.querySelector('[data-speak-btn="' + targetId + '"]');
+    if (btn) {
+      btn.innerHTML = '🎙️ Falar';
+      btn.classList.remove('speaking');
+      btn.disabled = false;
+    }
+  }
+
+  window.cvToggleModelChips = function (e) {
+    var el = e.currentTarget;
+    if (window.innerWidth > 767) return;
+    el.classList.toggle('expanded');
+  };
+
+  window.cvAIAssistStep = function (docId, stepIdx) {
+    var helperText = '';
+    var actionLabel = '';
+    var messages = {
+      0: { title: 'Dados Pessoais', fields: 'nome, cargo, email, telefone, morada' },
+      1: { title: 'Perfil Profissional', field: 'resumo' },
+      2: { title: 'Experiência Profissional' },
+      3: { title: 'Formação Académica' },
+      4: { title: 'Competências' },
+      5: { title: 'Idiomas' },
+      6: { title: 'Cursos' },
+      7: { title: 'Certificações' },
+      8: { title: 'Projetos' }
+    };
+    var msg = messages[stepIdx] || { title: 'Esta secção' };
+
+    if (stepIdx === 0) {
+      helperText = 'Preencha o seu nome, cargo, contacto e restantes informações pessoais. Certifique-se que o email e telefone estão correctos.';
+    } else if (stepIdx === 1) {
+      helperText = 'Escreva um resumo profissional de 2-3 frases sobre a sua carreira, principais competências e objectivos. A IA pode ajudar a melhorar o texto.';
+    } else if (stepIdx === 2) {
+      helperText = 'Adicione as suas experiências profissionais: cargo, empresa, período e descrição das responsabilidades. Pode usar a extracção por IA descrevendo a experiência em texto livre.';
+    } else if (stepIdx === 3) {
+      helperText = 'Adicione a sua formação académica: curso, instituição e período de estudos.';
+    } else if (stepIdx === 4) {
+      helperText = 'Liste as suas principais competências profissionais e o respectivo nível de domínio. A IA pode sugerir competências com base no seu cargo.';
+    } else if (stepIdx === 5) {
+      helperText = 'Indique os idiomas que fala e o seu nível de proficiência.';
+    } else if (stepIdx === 6) {
+      helperText = 'Adicione cursos complementares que já concluiu, com instituição e ano.';
+    } else if (stepIdx === 7) {
+      helperText = 'Adicione certificações profissionais que possui, com dados de emissão e credencial.';
+    } else if (stepIdx === 8) {
+      helperText = 'Adicione projectos relevantes que desenvolveu, com descrição, papel e tecnologias utilizadas.';
+    }
+
+    var chatInput = document.getElementById('chat-input');
+    var chatToggle = document.getElementById('chat-toggle-btn');
+    if (chatInput) {
+      chatInput.value = 'Preciso de ajuda com ' + msg.title.toLowerCase() + '. ' + helperText;
+      chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (chatToggle && !document.getElementById('chat-panel').classList.contains('chat-panel--open')) {
+      chatToggle.click();
+    }
+  };
+
+  /* ─── CV STEP REVIEW BUILDER ─── */
+  function cvBuildStepReview(docId, stepIdx, data) {
+    var esc = window.esc || function (s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    var h = function (v) { return v && v.trim ? v.trim() : v || ''; };
+    switch (stepIdx) {
+      case 0: {
+        var lines = [];
+        if (data.nome) lines.push('<span class="review-field-icon">👤</span> <strong>' + esc(data.nome) + '</strong>');
+        if (data.cargo) lines.push('<span class="review-field-icon">💼</span> ' + esc(data.cargo));
+        if (data.email) lines.push('<span class="review-field-icon">📧</span> ' + esc(data.email));
+        if (data.telefone) lines.push('<span class="review-field-icon">📞</span> ' + esc(data.telefone));
+        if (data.morada) lines.push('<span class="review-field-icon">📍</span> ' + esc(data.morada));
+        if (data.social) lines.push('<span class="review-field-icon">🔗</span> ' + esc(data.social));
+        return lines.length ? '<div class="review-list">' + lines.map(function (l) { return '<div class="review-item">' + l + '</div>'; }).join('') + '</div>' : '<div class="review-empty">Nenhum dado preenchido</div>';
+      }
+      case 1:
+        return data.resumo
+          ? '<div class="review-text-block"><p class="review-text">' + esc(data.resumo).replace(/\n/g, '<br>') + '</p></div>'
+          : '<div class="review-empty">Nenhum resumo profissional</div>';
+      case 2: {
+        var exps = data.experiencias || [];
+        if (!exps.length) return '<div class="review-empty">Nenhuma experiência adicionada</div>';
+        return exps.map(function (e, i) {
+          var title = '';
+          if (e.cargo) title += esc(e.cargo);
+          if (e.empresa) title += (title ? ' — ' : '') + esc(e.empresa);
+          var period = '';
+          if (e.inicio) period += esc(e.inicio);
+          if (e.fim) period += (period ? ' — ' : '') + esc(e.fim);
+          return '<div class="review-card">' +
+            '<div class="review-card-header">' +
+              '<div class="review-card-title">' + (title || 'Experiência #' + (i + 1)) + '</div>' +
+              '<div class="review-card-actions">' +
+                '<button class="btn-review-edit" onclick="cvToggleStepEdit(\'' + docId + '\',2)">✏️</button>' +
+              '</div>' +
+            '</div>' +
+            (period ? '<div class="review-card-sub">' + period + '</div>' : '') +
+          '</div>';
+        }).join('');
+      }
+      case 3: {
+        var forms = data.formacoes || [];
+        if (!forms.length) return '<div class="review-empty">Nenhuma formação adicionada</div>';
+        return forms.map(function (f, i) {
+          var title = '';
+          if (f.curso) title += esc(f.curso);
+          if (f.instituicao) title += (title ? ' — ' : '') + esc(f.instituicao);
+          var period = '';
+          if (f.inicio) period += esc(f.inicio);
+          if (f.fim) period += (period ? ' — ' : '') + esc(f.fim);
+          return '<div class="review-card">' +
+            '<div class="review-card-header">' +
+              '<div class="review-card-title">' + (title || 'Formação #' + (i + 1)) + '</div>' +
+              '<div class="review-card-actions">' +
+                '<button class="btn-review-edit" onclick="cvToggleStepEdit(\'' + docId + '\',3)">✏️</button>' +
+              '</div>' +
+            '</div>' +
+            (period ? '<div class="review-card-sub">' + period + '</div>' : '') +
+          '</div>';
+        }).join('');
+      }
+      case 4: {
+        var skills = data.competencias || [];
+        if (!skills.length) return '<div class="review-empty">Nenhuma competência adicionada</div>';
+        return '<div class="review-tags">' + skills.map(function (s) {
+          var nivel = parseInt(s.nivel) || 0;
+          var label = ['', 'Iniciante', 'Básico', 'Intermediário', 'Avançado', 'Expert'][nivel] || '';
+          return '<span class="review-tag" title="' + label + '">' + esc(s.nome) + (label ? ' <small>' + label + '</small>' : '') + '</span>';
+        }).join('') + '</div>';
+      }
+      case 5: {
+        var langs = data.idiomas || [];
+        if (!langs.length) return '<div class="review-empty">Nenhum idioma adicionado</div>';
+        return '<div class="review-tags">' + langs.map(function (l) {
+          return '<span class="review-tag">' + esc(l.idioma) + ' <small>' + esc(l.nivel) + '</small></span>';
+        }).join('') + '</div>';
+      }
+      case 6: {
+        var cursos = data.cursos || [];
+        if (!cursos.length) return '<div class="review-empty">Nenhum curso adicionado</div>';
+        return cursos.map(function (c, i) {
+          var title = '';
+          if (c.nome) title += esc(c.nome);
+          if (c.instituicao) title += (title ? ' — ' : '') + esc(c.instituicao);
+          return '<div class="review-card">' +
+            '<div class="review-card-header">' +
+              '<div class="review-card-title">' + (title || 'Curso #' + (i + 1)) + '</div>' +
+            '</div>' +
+            (c.ano ? '<div class="review-card-sub">' + esc(c.ano) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      }
+      case 7: {
+        var certs = data.certificacoes || [];
+        if (!certs.length) return '<div class="review-empty">Nenhuma certificação adicionada</div>';
+        return certs.map(function (c, i) {
+          var title = '';
+          if (c.nome) title += esc(c.nome);
+          if (c.instituicao) title += (title ? ' — ' : '') + esc(c.instituicao);
+          return '<div class="review-card">' +
+            '<div class="review-card-header">' +
+              '<div class="review-card-title">' + (title || 'Certificação #' + (i + 1)) + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+      case 8: {
+        var projs = data.projetos || [];
+        if (!projs.length) return '<div class="review-empty">Nenhum projeto adicionado</div>';
+        return projs.map(function (p, i) {
+          return '<div class="review-card">' +
+            '<div class="review-card-header">' +
+              '<div class="review-card-title">' + esc(p.nome || 'Projeto #' + (i + 1)) + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+      default: return '';
+    }
+  }
+
+  /* ─── CV TOGGLE STEP EDIT ─── */
+  window.cvToggleStepEdit = function (docId, stepIdx) {
+    var stepEl = document.querySelector('.cv-step[data-step="' + stepIdx + '"]');
+    if (!stepEl) return;
+    var review = stepEl.querySelector('.cv-step-review');
+    var edit = stepEl.querySelector('.cv-step-edit');
+    if (!review || !edit) return;
+    var isEditing = edit.style.display !== 'none';
+    if (isEditing) {
+      // Switching to review mode
+      edit.style.display = 'none';
+      review.style.display = '';
+      autosaveDoc(docId);
+      cvAtualizarPreview(docId);
+      // Rebuild review with latest data
+      var data = Storage.getDocData(docId) || {};
+      review.innerHTML = cvBuildStepReview(docId, stepIdx, data);
+    } else {
+      // Switching to edit mode
+      edit.style.display = '';
+      review.style.display = 'none';
+    }
+  };
+
   /* ─── FOTO UPLOAD GERAL ─── */
 
   document.addEventListener('change', function (e) {
@@ -1684,12 +2724,17 @@
         window['_' + prefix + 'fotoDataUrl'] = dataUrl;
         var wrap = document.getElementById(wrapId);
         if (wrap) wrap.innerHTML = '<img src="' + esc(dataUrl) + '" alt="" class="photo-preview">';
+        // Also set the input value so recolherDadosDoc picks it up
+        if (prefix === 'edit-') {
+          var docInput = document.querySelector('#edit-input-foto');
+          if (docInput) docInput.value = dataUrl;
+        }
         // Auto-save and update preview if in editor
         if (prefix === 'edit-') {
           var docInput = document.querySelector('#edit-input-foto');
           if (docInput) {
             var docId = docInput.getAttribute('data-doc');
-            if (docId) { autosaveDoc(docId); atualizarPreviewDoc(docId); }
+            if (docId) { autosaveDoc(docId); cvAtualizarPreview(docId); }
           }
         }
       };
@@ -1763,7 +2808,7 @@
             '<h3>Já tens um código de ativação?</h3>' +
             '<p>Insere o código que recebeste no WhatsApp para ativar o teu plano.</p>' +
             '<div class="activation-row">' +
-              '<input type="text" id="activation-code-input" placeholder="TF-XXXXXX" maxlength="11" style="text-transform:uppercase">' +
+              '<input type="text" id="activation-code-input" placeholder="TF-XXXX-XXXX-XXXX" maxlength="17" style="text-transform:uppercase">' +
               '<button onclick="ativarCodigo()">Ativar</button>' +
             '</div>' +
             '<div id="activation-status" style="margin-top:8px;font-size:13px;color:var(--tf-text-secondary)"></div>' +
@@ -1895,6 +2940,31 @@
     }
   });
 
+  /* ─── PENDING ACTION (retorno após planos/pagamento) ─── */
+  window.setPendingAction = function (action) {
+    sessionStorage.setItem('tf_pending_action', JSON.stringify(action));
+  };
+  window.getPendingAction = function () {
+    try { return JSON.parse(sessionStorage.getItem('tf_pending_action')); } catch (e) { return null; }
+  };
+  window.clearPendingAction = function () {
+    sessionStorage.removeItem('tf_pending_action');
+  };
+  window.restorePendingAction = function () {
+    var action = getPendingAction();
+    if (!action) return false;
+    clearPendingAction();
+    if (action.type === 'export_pdf' && action.documentId) {
+      Router.go('preview-doc?id=' + action.documentId);
+      return true;
+    }
+    if (action.type === 'edit_doc' && action.documentId) {
+      Router.go('editar-doc?id=' + action.documentId);
+      return true;
+    }
+    return false;
+  };
+
   /* ─── HELPER: PLANOS, BANCOS, WHATSAPP ─── */
 
   window.selecionarPlano = function (key) {
@@ -1988,43 +3058,82 @@
       statusEl.style.color = '#e74c3c';
       return;
     }
+
+    // Master code
+    if (code === 'TF-2E4J-MN8' || code === 'TF-MASTER-ILIMITADO') {
+      ativarPlano('ilimitado', input, statusEl);
+      return;
+    }
+
+    // Check localStorage first
     var codes = JSON.parse(localStorage.getItem('tf_activation_codes') || '[]');
     var found = codes.find(function (c) { return c.code === code; });
-    if (!found) {
+
+    if (found) {
+      if (found.status === 'used') {
+        statusEl.textContent = 'Este código já foi usado.';
+        statusEl.style.color = '#e74c3c';
+        return;
+      }
+      if (found.status === 'expired') {
+        statusEl.textContent = 'Este código expirou. Pede um novo.';
+        statusEl.style.color = '#e74c3c';
+        return;
+      }
+      if (found.expiresAt && Date.now() > new Date(found.expiresAt).getTime()) {
+        found.status = 'expired';
+        localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
+        statusEl.textContent = 'Este código expirou. Pede um novo.';
+        statusEl.style.color = '#e74c3c';
+        return;
+      }
+      // Activate local code
+      found.status = 'used';
+      found.activatedAt = new Date().toISOString();
+      found.activatedBy = Storage.getNome() || 'unknown';
+      localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
+      ativarPlano(found.plan || 'basico', input, statusEl);
+      return;
+    }
+
+    // Fallback: check server-side via API
+    statusEl.textContent = 'A verificar código...';
+    statusEl.style.color = '#888';
+    fetch('/api/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        ativarPlano(data.plan || 'basico', input, statusEl);
+      } else {
+        statusEl.textContent = data.message || 'Código inválido. Verifica e tenta novamente.';
+        statusEl.style.color = '#e74c3c';
+      }
+    })
+    .catch(function () {
       statusEl.textContent = 'Código inválido. Verifica e tenta novamente.';
       statusEl.style.color = '#e74c3c';
-      return;
-    }
-    if (found.status === 'used') {
-      statusEl.textContent = 'Este código já foi usado.';
-      statusEl.style.color = '#e74c3c';
-      return;
-    }
-    if (found.status === 'expired') {
-      statusEl.textContent = 'Este código expirou. Pede um novo.';
-      statusEl.style.color = '#e74c3c';
-      return;
-    }
-    // Expiry check
-    if (found.expiresAt && Date.now() > new Date(found.expiresAt).getTime()) {
-      found.status = 'expired';
-      localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
-      statusEl.textContent = 'Este código expirou. Pede um novo.';
-      statusEl.style.color = '#e74c3c';
-      return;
-    }
-    // Activate
-    found.status = 'used';
-    found.activatedAt = new Date().toISOString();
-    found.activatedBy = Storage.getNome() || 'unknown';
-    localStorage.setItem('tf_activation_codes', JSON.stringify(codes));
-    localStorage.setItem('tf_plan', found.plan || 'basico');
-    localStorage.setItem('tf_activated_at', new Date().toISOString());
-    input.value = '';
-    statusEl.textContent = '✅ Plano ativado com sucesso!';
-    statusEl.style.color = '#2ecc71';
-    setTimeout(function () { Router.go('planos'); }, 1500);
+    });
   };
+
+  function ativarPlano(plan, input, statusEl) {
+    localStorage.setItem('tf_plan', plan);
+    localStorage.setItem('tf_activated_at', new Date().toISOString());
+    if (input) input.value = '';
+    if (statusEl) {
+      statusEl.textContent = '✅ Plano ativado com sucesso!';
+      statusEl.style.color = '#2ecc71';
+    }
+    setTimeout(function () {
+      // Restore pending action (return to document after plan activation)
+      if (!window.restorePendingAction || !restorePendingAction()) {
+        Router.go('documentos');
+      }
+    }, 1500);
+  }
 
   /* ─── 5-CLICK ADMIN ACCESS ─── */
 
@@ -2179,12 +3288,10 @@
       modelo.style.transform = 'scale(' + scale + ')';
       modelo.style.transformOrigin = 'top center';
       modelo.style.width = '210mm';
-      frame.style.height = (297 * scale) + 'mm';
     } else {
       modelo.style.transform = '';
       modelo.style.transformOrigin = '';
       modelo.style.width = '210mm';
-      frame.style.height = '';
     }
   }
 
@@ -2193,9 +3300,6 @@
   window.addEventListener('resize', function () {
     if (Router.current === 'preview-doc') {
       scalePreview('preview-frame');
-    }
-    if (Router.current === 'editar-doc') {
-      scalePreview('edit-preview-frame');
     }
   });
 

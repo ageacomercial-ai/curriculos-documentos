@@ -12,6 +12,9 @@ const ALLOWED_ORIGINS = [
 
 function isAllowed(origin, referer) {
   const o = origin || referer || '';
+  if (!o) return false;
+  // Allow any Vercel preview deployment for ta-feito project
+  if (o.includes('.vercel.app') && o.includes('ta-feito')) return true;
   return ALLOWED_ORIGINS.some(a => o.startsWith(a));
 }
 
@@ -68,7 +71,7 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama3-70b-8192',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'system',

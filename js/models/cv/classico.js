@@ -17,6 +17,9 @@ ModelRegistry.register('cv', 'classico', {
     const formacoes = d.formacoes || [];
     const competencias = d.competencias || [];
     const idiomas = d.idiomas || [];
+    const cursos = d.cursos || [];
+    const certificacoes = d.certificacoes || [];
+    const projetos = d.projetos || [];
 
     const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
@@ -44,9 +47,27 @@ ModelRegistry.register('cv', 'classico', {
     };
 
     const renderIdiomas = () => {
-      const items = idiomas.filter(l => l.idioma);
+      const items = idiomas.filter(l => l.idioma && l.idioma.trim());
       if (!items.length) return '<div class="cv-language"><span class="cv-language-name" style="opacity:0.4">Adiciona idiomas</span></div>';
       return items.map(l => `<div class="cv-language"><span class="cv-language-name">${esc(l.idioma)}</span><span class="cv-language-level">${esc(l.nivel)}</span></div>`).join('');
+    };
+
+    const renderCursos = () => {
+      const items = cursos.filter(c => c.nome);
+      if (!items.length) return '';
+      return `<div class="cv-sidebar-section"><h3>Cursos</h3>${items.map(c => `<div class="cv-skill"><span class="cv-skill-name">${esc(c.nome)}</span>${c.instituicao ? `<div style="font-size:9px;opacity:0.7">${esc(c.instituicao)}${c.ano ? ' — '+esc(c.ano) : ''}</div>` : ''}</div>`).join('')}</div>`;
+    };
+
+    const renderCertificacoes = () => {
+      const items = certificacoes.filter(c => c.nome);
+      if (!items.length) return '';
+      return `<div class="cv-sidebar-section"><h3>Certificações</h3>${items.map(c => `<div class="cv-skill"><span class="cv-skill-name">${esc(c.nome)}</span>${c.instituicao ? `<div style="font-size:9px;opacity:0.7">${esc(c.instituicao)}</div>` : ''}</div>`).join('')}</div>`;
+    };
+
+    const renderProjetos = () => {
+      const items = projetos.filter(p => p.nome);
+      if (!items.length) return '';
+      return `<div class="cv-main-section"><h3>Projetos</h3>${items.map(p => `<div class="cv-item"><div class="cv-item-header"><span class="cv-item-title">${esc(p.nome)}</span></div>${p.descricao ? `<div class="cv-item-desc">${esc(p.descricao)}</div>` : ''}${p.papel ? `<div style="font-size:11px;opacity:0.7;margin-top:2px">Papel: ${esc(p.papel)}</div>` : ''}${p.tecnologias ? `<div style="font-size:10px;color:#c9a96e;margin-top:2px">${esc(p.tecnologias)}</div>` : ''}</div>`).join('')}</div>`;
     };
 
     const renderExp = () => {
@@ -54,7 +75,7 @@ ModelRegistry.register('cv', 'classico', {
       if (!items.length) return '';
       return `<div class="cv-main-section"><h3>Experiência Profissional</h3>${items.map(e => {
         const local = e.empresa ? [e.empresa] : [];
-        return `<div class="cv-item"><div class="cv-item-header"><span class="cv-item-title">${esc(e.cargo)}</span>${(e.inicio || e.fim) ? `<span class="cv-item-date">${esc(e.inicio||'')} — ${esc(e.fim||'')}</span>` : ''}</div>${local.length ? `<div class="cv-item-sub">${esc(local.join(', '))}</div>` : ''}${e.descricao ? `<div class="cv-item-desc">${esc(e.descricao)}</div>` : ''}</div>`;
+        return `<div class="cv-item"><div class="cv-item-header"><span class="cv-item-title">${esc(e.cargo)}</span>${(e.inicio || e.fim) ? `<span class="cv-item-date">${esc(e.inicio||'')} — ${esc(e.fim||'')}</span>` : ''}</div>${local.length ? `<div class="cv-item-sub">${esc(local.join(', '))}</div>` : ''}${e.descricao ? `<div class="cv-item-desc">${esc(e.descricao)}</div>` : ''}${e.responsabilidades ? `<div class="cv-item-desc" style="margin-top:4px;font-style:italic">Responsabilidades: ${esc(e.responsabilidades)}</div>` : ''}${e.conquistas ? `<div class="cv-item-desc" style="margin-top:2px;color:#c9a96e">Conquistas: ${esc(e.conquistas)}</div>` : ''}</div>`;
       }).join('')}</div>`;
     };
 
@@ -66,6 +87,6 @@ ModelRegistry.register('cv', 'classico', {
 
     const hasContent = experiencias.filter(e => e.cargo).length > 0 || formacoes.filter(f => f.curso).length > 0;
 
-    return `<div class="cv-modelo classico"><div class="cv-sidebar"><div><div class="cv-photo">${renderFoto()}</div></div><div class="cv-sidebar-section"><h3>Contacto</h3>${renderContacto() || '<div style="opacity:0.4;font-size:10px">Sem dados de contacto</div>'}</div><div class="cv-sidebar-section"><h3>Competências</h3>${renderSkills()}</div><div class="cv-sidebar-section"><h3>Idiomas</h3>${renderIdiomas()}</div></div><div class="cv-main"><div class="cv-header-main"><div class="cv-name">${esc(nome)}</div><div class="cv-title">${esc(cargo)}</div></div>${resumo ? `<div class="cv-resumo">${esc(resumo)}</div>` : ''}${renderExp()}${renderForm()}${!hasContent ? '<div style="padding:20px;text-align:center;color:#ccc;font-style:italic;margin-top:20px">Preenche o teu currículo para veres o resultado aqui</div>' : ''}</div></div>`;
+    return `<div class="cv-modelo classico"><div class="cv-sidebar"><div><div class="cv-photo">${renderFoto()}</div></div><div class="cv-sidebar-section"><h3>Contacto</h3>${renderContacto() || '<div style="opacity:0.4;font-size:10px">Sem dados de contacto</div>'}</div><div class="cv-sidebar-section"><h3>Competências</h3>${renderSkills()}</div><div class="cv-sidebar-section"><h3>Idiomas</h3>${renderIdiomas()}</div>${renderCursos()}${renderCertificacoes()}</div><div class="cv-main"><div class="cv-header-main"><div class="cv-name">${esc(nome)}</div><div class="cv-title">${esc(cargo)}</div></div>${resumo ? `<div class="cv-resumo">${esc(resumo)}</div>` : ''}${renderExp()}${renderForm()}${renderProjetos()}${!hasContent ? '<div style="padding:20px;text-align:center;color:#ccc;font-style:italic;margin-top:20px">Preenche o teu currículo para veres o resultado aqui</div>' : ''}</div></div>`;
   }
 });

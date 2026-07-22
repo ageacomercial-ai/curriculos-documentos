@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ta-feito-v2';
+const CACHE_NAME = 'ta-feito-v3';
 
 const PRECACHE_URLS = [
   './',
@@ -49,6 +49,12 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Don't cache API calls
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (event.request.url.startsWith(self.location.origin)) {
     event.respondWith(
       caches.match(event.request).then(cached => {

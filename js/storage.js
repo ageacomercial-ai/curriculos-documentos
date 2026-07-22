@@ -62,7 +62,9 @@
           formacoes: oldCV.formacoes || [],
           competencias: oldCV.competencias || [],
           idiomas: oldCV.idiomas || [],
-          certificacoes: []
+          certificacoes: [],
+          cursos: [],
+          projetos: []
         };
         set(KEYS.PROFILE, profile);
         set(KEYS.ACTIVE_DOC, { id: 'cv-principal', type: 'cv', name: 'CV Principal', model: oldCV.modelo || 'classico', updatedAt: new Date().toISOString(), data: profile });
@@ -93,7 +95,7 @@
     getProfile: function () {
       return get(KEYS.PROFILE) || {
         nome: '', cargo: '', email: '', telefone: '', morada: '', social: '', foto: '', resumo: '',
-        experiencias: [], formacoes: [], competencias: [], idiomas: [], certificacoes: []
+        experiencias: [], formacoes: [], competencias: [], idiomas: [], certificacoes: [], cursos: [], projetos: []
       };
     },
 
