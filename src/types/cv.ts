@@ -1,15 +1,22 @@
 export interface DadosCV {
+  id: string
   nome: string
   cargo: string
   email: string
   telefone: string
   endereco: string
   site: string
+  linkedin: string
+  foto: string
   resumo: string
   experiencia: Experiencia[]
   educacao: Educacao[]
   habilidades: string[]
   idiomas: Idioma[]
+  cor_primaria: string
+  template: string
+  criadoEm: string
+  atualizadoEm: string
 }
 
 export interface Experiencia {
@@ -18,6 +25,7 @@ export interface Experiencia {
   inicio: string
   fim: string
   descricao: string
+  atual: boolean
 }
 
 export interface Educacao {
@@ -30,11 +38,15 @@ export interface Educacao {
 
 export interface Idioma {
   lingua: string
-  nivel: 'Básico' | 'Intermediário' | 'Avançado' | 'Fluente'
+  nivel: 'Básico' | 'Intermediário' | 'Avançado' | 'Fluente' | 'Nativo'
 }
 
 export interface Template {
   id: string
   nome: string
   descricao: string
+  cor: string
+  preview: string
 }
+
+export type Pagina = 'home' | 'form' | 'modelos' | 'preview' | 'exportar'
