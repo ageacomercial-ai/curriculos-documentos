@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { DadosCV, Experiencia, Educacao, Idioma } from '../types/cv'
 
 interface Props {
@@ -108,4 +109,3 @@ export default function EditorVisual({ dados, onChange }: Props) {
   )
 }
 
-import { useState } from 'react'
