@@ -13,6 +13,7 @@ type Etapa = 'basico' | 'experiencia' | 'educacao' | 'habilidades' | 'idiomas' |
 export default function Perguntas({ dados, onChange, onNext }: Props) {
   const [etapa, setEtapa] = useState<Etapa>('basico')
   const [passo, setPasso] = useState(0)
+  const [inputHabilidade, setInputHabilidade] = useState('')
 
   const handleChange = (chave: string, valor: string) => {
     onChange({ ...dados, [chave]: valor })
@@ -166,21 +167,18 @@ export default function Perguntas({ dados, onChange, onNext }: Props) {
     </div>
   )
 
-  const renderHabilidades = () => {
-    const [input, setInput] = useState('')
-
-    return (
+  const renderHabilidades = () => (
       <div>
         <h2 className="section-title">Habilidades</h2>
         <div className="flex" style={{ marginBottom: 16 }}>
           <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
+            value={inputHabilidade}
+            onChange={e => setInputHabilidade(e.target.value)}
             placeholder="Digite uma habilidade e pressione Enter"
             style={{ flex: 1, padding: 10, borderRadius: 8, border: '2px solid #e0e0e0', fontSize: '1rem' }}
-            onKeyDown={e => { if (e.key === 'Enter') { adicionarHabilidade(input); setInput('') } }}
+            onKeyDown={e => { if (e.key === 'Enter') { adicionarHabilidade(inputHabilidade); setInputHabilidade('') } }}
           />
-          <button className="btn btn-primary" onClick={() => { adicionarHabilidade(input); setInput('') }}>Adicionar</button>
+          <button className="btn btn-primary" onClick={() => { adicionarHabilidade(inputHabilidade); setInputHabilidade('') }}>Adicionar</button>
         </div>
         <div style={{ marginBottom: 24 }}>
           {dados.habilidades.map((hab, i) => (
@@ -193,7 +191,6 @@ export default function Perguntas({ dados, onChange, onNext }: Props) {
         <button className="btn btn-primary" onClick={() => setEtapa('idiomas')}>Idiomas →</button>
       </div>
     )
-  }
 
   const renderIdiomas = () => (
     <div>
