@@ -1,0 +1,119 @@
+╔══════════════════════════════════════════════════════════════╗
+║              DADOS BANCÁRIOS — TÁ FEITO                     ║
+║              AGEA Soluções Tecnológicas                      ║
+║              Titular: Adelino Graça Daniel João              ║
+╚══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                     PLANOS E PREÇOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Avulso       ·   1 documento   ·   1.000 Kz
+  Básico       ·  20 documentos  ·  10.000 Kz
+  Profissional ·  50 documentos  ·  18.000 Kz
+  Ilimitado    · 100 documentos  ·  27.000 Kz
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                       BFA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Banco:      BFA
+  Titular:    Adelino Graça Daniel João
+  IBAN:       AO06 0040 0000 8864 9766 3011 4
+  Tipo:       Transferência Bancária (IBAN)
+
+  Instruções:
+  1. Faz a transferência para o IBAN acima.
+  2. Tira um screenshot ou foto do comprovativo.
+  3. Envia pelo WhatsApp +244 937 876 711.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                       BAI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Banco:      BAI
+  Titular:    Adelino Graça Daniel João
+  IBAN:       AO06 0040 0000 2479 2016 1017 5
+  Tipo:       Transferência Bancária (IBAN)
+
+  Instruções:
+  1. Faz a transferência para o IBAN acima.
+  2. Tira um screenshot ou foto do comprovativo.
+  3. Envia pelo WhatsApp +244 937 876 711.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                       BIC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Banco:      BIC
+  Titular:    Adelino Graça Daniel João
+  IBAN:       AO06 0051 0000 2320 4454 1011 3
+  Tipo:       Transferência Bancária (IBAN)
+
+  Instruções:
+  1. Faz a transferência para o IBAN acima.
+  2. Tira um screenshot ou foto do comprovativo.
+  3. Envia pelo WhatsApp +244 937 876 711.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  MULTICAIXA EXPRESS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Banco:      Multicaixa Express
+  Titular:    Adelino Graça Daniel João
+  Número:     937 876 711
+  Tipo:       Pagamento Imediato (número de telefone)
+  Badge:      ⚡ IMEDIATO
+
+  Nota: Para uma confirmação mais rápida, sempre que possível,
+  utiliza o mesmo banco de onde estás a fazer a transferência.
+  Transferências entre bancos diferentes podem demorar até
+  24 horas a refletir.
+
+  Instruções:
+  1. Faz o pagamento no Multicaixa Express usando o número acima.
+  2. Tira um screenshot ou foto do comprovativo.
+  3. Envia pelo WhatsApp +244 937 876 711.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    WHATSAPP PARA CONFIRMAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Número:     +244 937 876 711
+  Link:       https://wa.me/244937876711
+
+  Mensagem padrão enviada:
+  ┌─────────────────────────────────────────────────┐
+  │ Olá! Quero activar o plano [NOME_DO_PLANO].    │
+  │ Nome: [NOME_DO_USER]                           │
+  │ Valor: [VALOR] Kz                              │
+  │ Método: Transferência Bancária                 │
+  │                                                 │
+  │ Segue em anexo o comprovativo.                 │
+  └─────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                 CÓDIGOS DE ACTIVAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Formato:    TF-XXXX-XXXX-XXXX  (ex: TF-7K4M-92QX-PL8R)
+  Prefixo:    TF-
+  Validade:   48 horas após geração
+  Gerado em:  Painel Admin (/admin) pelo administrador
+  Onde se usa: Input "Código de Activação" na página Planos
+
+  Códigos mestre (dev/debug):
+  • TF-2E4J-MN8
+  • TF-MASTER-ILIMITADO
+
+  localStorage:
+  • tf_plan              → plano activo (avulso, basic, pro, unlimited)
+  • tf_activated_at      → data da activação
+  • tf_selected_plan     → plano seleccionado no checkout
+  • tf_activation_codes  → array de códigos gerados (admin local)
+
+  Variáveis de ambiente (Vercel):
+  • ACTIVATION_CODES     → JSON { "TF-XXXX-XXXX-XXXX": "ilimitado", ... }
+  • ADMIN_PIN            → PIN numérico para acesso ao painel admin
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
